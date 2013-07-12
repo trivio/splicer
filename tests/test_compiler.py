@@ -5,6 +5,7 @@ from nose.tools import *
 from splicer import DataSet, Query
 from splicer.ast import *
 from splicer.compilers.local import compile
+
 from .fixtures.employee_server import EmployeeServer
   
 

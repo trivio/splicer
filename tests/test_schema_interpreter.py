@@ -3,7 +3,9 @@
 from nose.tools import *
 
 from splicer import schema_interpreter
+
 from splicer.ast import LoadOp, StringConst, Function
+
 from .fixtures import mock_data_set
 
 

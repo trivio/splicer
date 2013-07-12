@@ -4,6 +4,7 @@ from splicer import Query, Schema, Field
 from splicer.query_builder import  QueryBuilder
 from splicer.ast import *
 
+
 from .fixtures import mock_data_set
 
 

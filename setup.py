@@ -9,11 +9,12 @@ try:
 except IOError:
     README = ''
 
+import splicer
 
 setup(
   name='splicer',
 
-  version='0.0.7',
+  version=splicer.__version__,
   description='the world is a database now you can query it with SQL',
   long_description=README,
   author='Scott Robertson',

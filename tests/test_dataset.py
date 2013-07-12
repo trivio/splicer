@@ -2,6 +2,7 @@ from nose.tools import *
 
 from splicer import DataSet, Table, Query
 from splicer.query_builder import QueryBuilder
+
 from splicer.ast import LoadOp, ProjectionOp, Var
 
 from .fixtures.mock_server import MockServer
