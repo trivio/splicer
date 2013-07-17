@@ -1,12 +1,12 @@
-from unittest import TestCase
 from nose.tools import *
 
+from insitu import Query, Schema, Field
 from insitu.query_builder import  QueryBuilder
 
-from fixtures import mock_data_set
+from .fixtures import mock_data_set
 
 
-def test_from():
+def test_from_bogus():
   dataset = mock_data_set()
   qb = QueryBuilder(dataset)
 
@@ -21,12 +21,18 @@ def test_from():
   q  = qb_w_from.query
   assert_is_instance(q, Query)
 
-  q.columns = ["all the columns in bogus"]
-  q.execute = "iterator of all the records"
+  assert_equal(
+    q.schema,
+    dataset.get_relation('bogus').schema
+  )
+
+  #q.execute = "iterator of all the records"
+  assert_sequence_equal(
+    list(q.execute()),
+    []
+  )
 
 
-
-  #q_final = q_w_from.validate()
 
 
 def test_select():
@@ -43,23 +49,35 @@ def test_select():
   assert_raises(ValueError, lambda : qb_w_select.query)
 
   qb_w_select_and_from = qb_w_select.frm('bogus')
-  query =  qb_w_select_and_from.query
+
+  q =  qb_w_select_and_from.query
 
   assert_is_instance(q, Query)
 
   assert_sequence_equal(
-    q.columns, 
-    (
-      Field(name="x", type="INTEGER")
+    q.schema.fields, 
+    [
+      Field(name="x", type="INTEGER"),
       Field(name="y", type="INTEGER")
-    )
+    ]
   )
-
-  assert_sequence_qual(
+  
+  assert_sequence_equal(
     list(q.execute()),
-    ... data in the mock server ..
-
+    []
   )
+
+
+  qb_select_y_from_bogus = qb.select('y').frm('bogus')
+  eq_(qb_select_y_from_bogus.column_exps, 'y')
+
+  assert_sequence_equal(
+    qb_select_y_from_bogus.query.schema.fields, 
+    [
+      Field(name="y", type="INTEGER")
+    ]
+  )
+
 
 
 

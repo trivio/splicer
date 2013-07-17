@@ -1,0 +1,9 @@
+*.py[c|o]
+*.egg-info/
+# results of virtualenv in the same directory
+.Python
+bin
+lib
+man
+include
+.coverage

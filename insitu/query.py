@@ -1,52 +1,29 @@
 class Query(object):
   __slots__ = {
-    'column_exp': 'str uparsed column',
+    'schema': 'Schema',
     'column_names': '-> [str] list of column name',
     #'column_exps' : 'List of column exp objects',
     'dataset': '-> DataSet',
+    'operations': '-> [Operations]',
+    'relation': 'Relation'
   }
 
-  @classmethod
-  def parse(cls, dataset, statement):
-    pass
 
-
-  def __init__(self, dataset):
+  def __init__(self, dataset, schema, operations, relation):
     self.dataset = dataset
+    self.schema = schema
+    self.operations = operations
+    self.relation = relation
 
+  def execute(self, *params):
+    ctx = {
+      'params': params,
+      'udf': {}
+    }
 
-  def validate(self):
-    if cols:
-      if cols == '*':
-        cols = ','.join(self.__schema__)
+    relation = self.relation
+    for op in self.operations:
+      relation = op(relation, ctx)
+  
+    return relation
 
-      self.col_exps = codd.parse(
-        "({})".format(cols), 
-        get_value=self.get_value
-      ).func_closure[0].cell_contents
-
-
-      #self.col_exps = [
-      #  codd.parse(col, get_value=self.get_value)
-      #  for col in cols
-      #]
-
-      self.reducers = [
-        (pos, self.aggregates[col.__name__])
-        for pos, col in enumerate(self.col_exps)
-        if col.__name__ in self.aggregates
-      ]
- 
-      self.schema = [
-        getattr(c, '__name__', "col{}".format(i))
-        for i,c in enumerate(self.col_exps)
-      ]
-      result_class = self.result_class = namedtuple("row", self.schema)
-
-
-    self.cols = cols
-    return self
-
-
-  def execute(self):
-    return

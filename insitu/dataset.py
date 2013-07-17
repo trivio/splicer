@@ -54,9 +54,17 @@ class DataSet(object):
 
     return relation
 
+  def get_field(self, name):
+    """
+    Return the field object associated
+    """
+
   def query(self, statement):
     """Parses the statement and returns a Query"""
     return Query.parse(self, statement)
 
   def select(self, *cols):
     return QueryBuilder(self).select(*cols)
+
+  def udfs(self):
+    return {}

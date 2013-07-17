@@ -21,4 +21,18 @@ class Table(object):
 
   @property
   def fields(self):
-    return [field for field in self.schema.fields]
+    return self.schema.fields
+
+
+  def rows(self, qualifiers, columns):
+    """
+    Returns an iterator of tuples. 
+
+    Table implementations from remote servers should use qualifiers
+    and columns to reduce the set of results if they can. This will
+    save network bandwidth or disk load time. Insitu will filter and 
+    take the columns it needs from the rows returned by this method 
+    regardless so Servers without filtering capabilities are free
+    to return the data as is.
+    """
+    return iter([])

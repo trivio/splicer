@@ -1,3 +1,8 @@
+from . import Query
+from .relational_ops import SelectionOp
+import query_parser
+
+
 class QueryBuilder(object):
   """
   Helps build a query 
@@ -64,36 +69,22 @@ class QueryBuilder(object):
     Returns a valid query suitable for execution, or raises an exception.
     """
 
-    if cols:
-      if cols == '*':
-        cols = ','.join(self.__schema__)
-
-      self.col_exps = codd.parse(
-        "({})".format(cols), 
-        get_value=self.get_value
-      ).func_closure[0].cell_contents
+    if not self.relations:
+      raise ValueError('Need to specify at least one relation')
 
 
-      #self.col_exps = [
-      #  codd.parse(col, get_value=self.get_value)
-      #  for col in cols
-      #]
-
-      self.reducers = [
-        (pos, self.aggregates[col.__name__])
-        for pos, col in enumerate(self.col_exps)
-        if col.__name__ in self.aggregates
-      ]
- 
-      self.schema = [
-        getattr(c, '__name__', "col{}".format(i))
-        for i,c in enumerate(self.col_exps)
-      ]
-      result_class = self.result_class = namedtuple("row", self.schema)
+    project_op = query_parser.parse_select(
+      self.column_exps, 
+      self.dataset, 
+      self.relations
+    )
 
 
-    self.cols = cols
-    return self
+    selection_op = SelectionOp(self.relations[0].schema)
+
+    operations = [selection_op, project_op]
+
+    return Query(self.dataset, project_op.schema, operations, self.relations[0])
 
 
   def execute(self):
