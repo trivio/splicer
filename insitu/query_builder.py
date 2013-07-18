@@ -1,5 +1,5 @@
 from . import Query
-from .relational_ops import SelectionOp
+from .ast import SelectionOp
 import query_parser
 
 
