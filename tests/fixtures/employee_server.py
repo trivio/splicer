@@ -1,4 +1,4 @@
-from insitu.servers.dict_server import DictServer
+from splicer.servers.dict_server import DictServer
 from datetime import date
 
 employee_records = [

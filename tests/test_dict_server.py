@@ -1,8 +1,8 @@
 from datetime import date
 from nose.tools import *
 
-from insitu import Query, Schema, Field
-from insitu.servers.dict_server import DictServer
+from splicer import Query, Schema, Field
+from splicer.servers.dict_server import DictServer
 
 
 employee_records = [

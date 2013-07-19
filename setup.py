@@ -11,14 +11,14 @@ except IOError:
 
 
 setup(
-  name='insitu',
+  name='splicer',
 
   version='0.0.1',
   description='the world is a database',
   long_description=README,
   author='Scott Robertson',
   author_email='scott@triv.io',
-  url='http://github.com/trivio/insitu',
+  url='http://github.com/trivio/splicer',
   classifiers=[
       "Programming Language :: Python",
       "License :: OSI Approved :: MIT License",

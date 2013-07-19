@@ -1,6 +1,6 @@
 from nose.tools import *
 
-from insitu import Schema
+from splicer import Schema
 from .fixtures import mock_data_set
 
 

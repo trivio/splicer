@@ -1,4 +1,4 @@
-from insitu import Table
+from splicer import Table
 
 class DictServer(object):
   """

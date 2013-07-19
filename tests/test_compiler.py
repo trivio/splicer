@@ -2,9 +2,9 @@ from datetime import date
 
 from nose.tools import *
 
-from insitu import DataSet, Table, Query
-from insitu.ast import *
-from insitu.compilers.local import compile
+from splicer import DataSet, Table, Query
+from splicer.ast import *
+from splicer.compilers.local import compile
 
 from .fixtures.employee_server import EmployeeServer
 

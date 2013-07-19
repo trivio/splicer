@@ -2,7 +2,7 @@
 
 from nose.tools import *
 
-from insitu import schema_interpreter
+from splicer import schema_interpreter
 
 from .fixtures import mock_data_set
 

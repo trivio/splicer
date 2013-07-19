@@ -1,7 +1,7 @@
 from nose.tools import *
-from insitu import query_parser
+from splicer import query_parser
 
-from insitu.ast import (
+from splicer.ast import (
   NumberConst, StringConst, Var, Function, Tuple,
   NegOp, NotOp, MulOp, DivOp, ItemGetterOp, ParamGetterOp,
 

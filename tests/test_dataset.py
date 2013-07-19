@@ -1,7 +1,7 @@
 from nose.tools import *
 
-from insitu import DataSet, Table, Query
-from insitu.query_builder import QueryBuilder
+from splicer import DataSet, Table, Query
+from splicer.query_builder import QueryBuilder
 from .fixtures.mock_server import MockServer
 
 

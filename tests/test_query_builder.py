@@ -1,8 +1,8 @@
 from nose.tools import *
 
-from insitu import Query, Schema, Field
-from insitu.query_builder import  QueryBuilder
-from insitu.ast import ProjectionOp, SelectionOp, Var, EqOp, NumberConst
+from splicer import Query, Schema, Field
+from splicer.query_builder import  QueryBuilder
+from splicer.ast import ProjectionOp, SelectionOp, Var, EqOp, NumberConst
 
 from .fixtures import mock_data_set
 

@@ -1,4 +1,4 @@
-from insitu import DataSet, Query
+from splicer import DataSet, Query
 
 from .mock_server import  MockServer
 from .employee_server import EmployeeServer
