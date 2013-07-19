@@ -5,18 +5,18 @@ employee_records = [
   dict(
     employee_id=1234, 
     full_name="Tom Tompson", 
-    empolyment_date=date(2009,1,17)
+    employment_date=date(2009,1,17)
   ),
   dict(
     employee_id=4567, 
     full_name="Sally Sanders",
-    empolyment_date=date(2010,2,24),
+    employment_date=date(2010,2,24),
     manager_id = 1234
   ),
   dict(
     employee_id=8901, 
     full_name="Mark Markty",
-    empolyment_date=date(2010,3,1),
+    employment_date=date(2010,3,1),
     manager_id = 1234
   )
 ]

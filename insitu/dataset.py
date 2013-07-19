@@ -1,11 +1,15 @@
 from .query import Query
 from .query_builder import QueryBuilder
 
+from .compilers import local
+
 class DataSet(object):
 
   def __init__(self):
     self.servers = []
     self.relation_cache = {}
+    self.executor = None
+    self.compile = local.compile
 
 
   def add_server(self, server):
@@ -19,6 +23,7 @@ class DataSet(object):
 
     if server not in self.servers:
       self.servers.append(server)
+
 
   @property
   def relations(self):
@@ -59,9 +64,20 @@ class DataSet(object):
     Return the field object associated
     """
 
+  def set_compiler(self, compile_fun):
+    self.compile = compile_fun
+
+
+  def execute(self, query, *params):
+    callable = self.compile(query)
+    return callable(*params)
+
   def query(self, statement):
     """Parses the statement and returns a Query"""
     return Query.parse(self, statement)
+
+  def frm(self, relation_name):
+    return QueryBuilder(self).frm(relation_name)
 
   def select(self, *cols):
     return QueryBuilder(self).select(*cols)

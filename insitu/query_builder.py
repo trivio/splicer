@@ -1,5 +1,5 @@
 from . import Query
-from .ast import SelectionOp
+from .ast import SelectionOp, And, SelectAllExpr
 import query_parser
 
 
@@ -41,11 +41,13 @@ class QueryBuilder(object):
   def select(self, column_exps):
     return self.new(column_exps=column_exps)
 
-  def frm(self, relation):
-    if isinstance(relation, basestring):
-      relation = self.dataset.get_relation(relation)
+  def frm(self, relation_name):
+    if isinstance(relation_name, basestring):
+      relation = self.dataset.get_relation(relation_name)
       if relation is None:
-        raise ValueError, "No such relation {0}".format(relation)
+        raise ValueError, "No such relation {0}".format(relation_name)
+    else:
+      relation = relation_name
     return self.new(relations=self.relations + (relation,))
 
   def where(self, qualifiers):
@@ -72,19 +74,28 @@ class QueryBuilder(object):
     if not self.relations:
       raise ValueError('Need to specify at least one relation')
 
+    operations = []
 
-    project_op = query_parser.parse_select(
-      self.column_exps, 
-      self.dataset, 
-      self.relations
+    if self.qualifiers:
+      qualifiers = iter(self.qualifiers)
+      bool_op = query_parser.parse(qualifiers.next())
+      for qualifier in qualifiers:
+        bool_op = And(bool_op, query_parser.parse(qualifier))
+
+      operations.append(SelectionOp(bool_op))
+
+    projection_op = query_parser.parse_select(self.column_exps)
+
+    is_select_star = (
+      len(projection_op.exprs) == 1
+      and isinstance(projection_op.exprs[0], SelectAllExpr)
+      and projection_op.exprs[0].table is None
+
     )
+    if not is_select_star:
+      operations.append(projection_op)
 
-
-    selection_op = SelectionOp(self.relations[0].schema)
-
-    operations = [selection_op, project_op]
-
-    return Query(self.dataset, project_op.schema, operations, self.relations[0])
+    return Query(self.dataset, self.relations[0], operations)
 
 
   def execute(self):

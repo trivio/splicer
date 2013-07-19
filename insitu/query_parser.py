@@ -142,7 +142,7 @@ def tuple_exp(tokens):
   
   tokens.pop(0)
 
-  return TupleExp(*args)
+  return Tuple(*args)
  
 
 def function_exp(name, tokens):
@@ -150,7 +150,7 @@ def function_exp(name, tokens):
   assert token == '('
 
   args = tuple_exp(tokens)
-  return FunctionExp(name, *args.exps)
+  return Function(name, *args.exps)
 
 def var_exp(name, tokens):
   path = [name]
@@ -177,12 +177,12 @@ def select_core_exp(tokens):
 def result_column_exp(tokens):
   if tokens[0] == '*':
     tokens.pop(0)
-    return SelectAllExp()
+    return SelectAllExpr()
   else:
     exp = value_exp(tokens)
     if tokens and isinstance(exp, Var) and tokens[0] == '*':
       tokens.pop(0) # '*'
-      return SelectAll(exp.path)
+      return SelectAllExpr(exp.path)
     else:
       if tokens and tokens[0].lower() == 'as':
         tokens.pop(0) # 'as'

@@ -32,4 +32,23 @@ def test_query_builder():
   eq_(query.dataset, dataset)
   eq_(query.column_exps, 'x')
 
+def test_complier():
+  def compile(query):
+    return lambda: Table(
+      'results!', 
+      schema = dict(
+        fields = [
+          dict(name="?column?", type="INTEGER")
+        ]
+      )
+    )
 
+
+  dataset = DataSet()
+  server = MockServer()
+  dataset.add_server(server)
+  dataset.set_compiler(compile)
+
+  query = dataset.frm('bogus').query
+
+  table = dataset.execute(query)

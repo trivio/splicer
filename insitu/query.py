@@ -1,29 +1,20 @@
+from .schema_interpreter import interpret as interpret_schema
 class Query(object):
   __slots__ = {
-    'schema': 'Schema',
-    'column_names': '-> [str] list of column name',
-    #'column_exps' : 'List of column exp objects',
     'dataset': '-> DataSet',
     'operations': '-> [Operations]',
     'relation': 'Relation'
   }
 
 
-  def __init__(self, dataset, schema, operations, relation):
+  def __init__(self, dataset, relation, operations):
     self.dataset = dataset
-    self.schema = schema
-    self.operations = operations
     self.relation = relation
+    self.operations = operations
 
+  @property
+  def schema(self):
+    return interpret_schema(self.dataset, self.relation, self.operations)
+    
   def execute(self, *params):
-    ctx = {
-      'params': params,
-      'udf': {}
-    }
-
-    relation = self.relation
-    for op in self.operations:
-      relation = op(relation, ctx)
-  
-    return relation
-
+    self.dataset.execute(self, *params)

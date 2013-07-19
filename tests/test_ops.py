@@ -1,11 +1,10 @@
 from nose.tools import *
 
 from insitu import Schema
-from insitu import relational_ops
 from .fixtures import mock_data_set
 
 
-def test_project():
+def __test_projection():
   employees = mock_data_set().get_relation('employees')
   op = relational_ops.ProjectOp(
     Schema([dict(
@@ -23,7 +22,7 @@ def test_project():
     [(1234,), (4567,), (8901,)]
   )
 
-def test_selection():
+def __test_selection():
   employees = mock_data_set().get_relation('employees')
   op = relational_ops.SelectionOp(employees.schema)
 

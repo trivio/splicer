@@ -2,6 +2,7 @@ from nose.tools import *
 
 from insitu import Query, Schema, Field
 from insitu.query_builder import  QueryBuilder
+from insitu.ast import ProjectionOp, SelectionOp, Var, EqOp, NumberConst
 
 from .fixtures import mock_data_set
 
@@ -26,13 +27,10 @@ def test_from_bogus():
     dataset.get_relation('bogus').schema
   )
 
-  #q.execute = "iterator of all the records"
-  assert_sequence_equal(
-    list(q.execute()),
+  assert_equal(
+    q.operations,
     []
   )
-
-
 
 
 def test_select():
@@ -61,12 +59,11 @@ def test_select():
       Field(name="y", type="INTEGER")
     ]
   )
-  
-  assert_sequence_equal(
-    list(q.execute()),
-    []
-  )
 
+  assert_equal(
+    q.operations,
+    [ProjectionOp(Var('x'), Var('y'))]
+  )
 
   qb_select_y_from_bogus = qb.select('y').frm('bogus')
   eq_(qb_select_y_from_bogus.column_exps, 'y')
@@ -78,9 +75,43 @@ def test_select():
     ]
   )
 
-
+  assert_equal(
+    qb_select_y_from_bogus.query.operations,
+    [ProjectionOp(Var('y'))]
+  )
 
 
 def test_where():
-  pass
+  dataset = mock_data_set()
+  qb = QueryBuilder(dataset).frm('employees').where('employee_id = 123')
+
+  assert_equal(
+    qb.query.operations,
+    [SelectionOp(EqOp(Var('employee_id'), NumberConst(123)))]
+  )
+
+def test_projection_and_selection():
+  dataset = mock_data_set()
+
+  qb = QueryBuilder(dataset).select(
+    'full_name'
+  ).frm('employees').where('employee_id = 123')
+
+  query = qb.query
+  assert_equal(
+    query.operations,
+    [
+      SelectionOp(EqOp(Var('employee_id'), NumberConst(123))),
+      ProjectionOp(Var('full_name'))
+    ]
+  )
+
+  assert_sequence_equal(
+    query.schema.fields, 
+    [
+      Field(name="full_name", type="STRING")
+    ]
+  )
+
+
 
