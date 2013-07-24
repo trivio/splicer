@@ -1,5 +1,6 @@
 *.py[c|o]
 *.egg-info/
+*.egg/
 # results of virtualenv in the same directory
 .Python
 bin
@@ -7,3 +8,4 @@ lib
 man
 include
 .coverage
+docs/_build/*
