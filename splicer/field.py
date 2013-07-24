@@ -4,17 +4,17 @@ class Field(object):
     'type': "-> string [REQUIRED] integer|float|string|boolean|date|datetime|time|record",
     'mode': "-> string [OPTIONAL] REQUIRED|NULLABLE|REPEATED: default NULLABLE",
     'fields': "-> list [OPTIONAL IF type = RECORD]",
-    'getter': "-> function(row,ctx) -> object"
   }
 
   def __init__(self, **attrs):
     self.name = attrs['name']
     self.type = attrs['type']
     self.mode = attrs.get('mode', 'NULLABLE')
-    self.fields = attrs.get('fields', [])
+    self.fields = [
+      f if isinstance(f, Field) else Field(**f)
+      for f in attrs.get('fields', [])
+    ]
 
-    # Todo: consider making a subclass for this
-    self.getter = attrs.get('getter', None)
 
   def __repr__(self):
     return "<Field(name={name}, type={type} at {id}>".format(
@@ -37,5 +37,13 @@ class Field(object):
     attrs.update(parts)
 
     return self.__class__(**attrs)
+
+  def to_dict(self):
+    return dict(
+      name = self.name,
+      type = self.type,
+      mode = self.mode,
+      fields = [f.to_dict() for f in self.fields]
+    )
 
 
