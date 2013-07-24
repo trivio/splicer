@@ -24,8 +24,11 @@ class MockServer(object):
     }
 
   @property
-  def tables(self):
-    return self._tables.values()
+  def relations(self):
+    return [
+      (name, table.schema)
+      for name, table in self._tables.items()
+    ]
 
   def get_table(self, name):
     return self._tables.get(name)

@@ -36,8 +36,8 @@ class DataSet(object):
     """
 
     for server in self.servers:
-      for relation in server.tables:
-        self.relation_cache[relation.name] = relation
+      for name, schema in server.relations:
+        self.relation_cache[name] = schema
     return self.relation_cache.items()
 
 
@@ -59,10 +59,7 @@ class DataSet(object):
 
     return relation
 
-  def get_field(self, name):
-    """
-    Return the field object associated
-    """
+ 
 
   def set_compiler(self, compile_fun):
     self.compile = compile_fun
@@ -70,7 +67,11 @@ class DataSet(object):
 
   def execute(self, query, *params):
     callable = self.compile(query)
-    return callable(*params)
+    ctx = {
+      'dataset': self
+    }
+
+    return callable(ctx, *params)
 
   def query(self, statement):
     """Parses the statement and returns a Query"""

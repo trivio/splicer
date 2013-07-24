@@ -3,13 +3,16 @@ class Server(object):
   Servere objects provide tables to the dataset.
   """
 
-  def tables(self):
+  def relations(self):
     """
-    May return a list of -some- of the tables the server supports.
+    May return a list of name and schema of -some- of the relations 
+    the server supports.
+    
     Some Servers like HTTP etc.. will create tables on the fly
-    based on the passed in URL
+    based on the passed in URL so introspection is not possible
     """
+    return []
     
   def get_table(self, name):
-    """Return the table with the given name or None if this
+    """Return the relation (table, view, etc..) with the given name or None if this
     server does not have the given table."""

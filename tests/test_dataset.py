@@ -34,7 +34,7 @@ def test_query_builder():
 
 def test_complier():
   def compile(query):
-    return lambda: Table(
+    return lambda ctx, *params: Table(
       'results!', 
       schema = dict(
         fields = [
