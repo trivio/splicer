@@ -9,3 +9,4 @@ man
 include
 .coverage
 docs/_build/*
+dist
