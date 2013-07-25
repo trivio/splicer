@@ -40,7 +40,7 @@ def or_exp(tokens):
   lhs = comparison_exp(tokens)
   while len(tokens) and tokens[0] == 'or':
     tokens.pop(0)
-    lhs = Or(lhs, comparisson_exp(tokens))
+    lhs = Or(lhs, comparison_exp(tokens))
   return lhs
   
 def comparison_exp(tokens):
