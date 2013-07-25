@@ -2,7 +2,7 @@ from nose.tools import *
 
 from splicer import Query, Schema, Field
 from splicer.query_builder import  QueryBuilder
-from splicer.ast import ProjectionOp, SelectionOp, Var, EqOp, NumberConst
+from splicer.ast import ProjectionOp, SelectionOp, Var, EqOp, NumberConst, OrderByOp, Desc
 
 from .fixtures import mock_data_set
 
@@ -16,15 +16,15 @@ def test_from_bogus():
   # nev versions
   assert_is_not(qb, qb_w_from)
 
-  relations = [r.name for r in qb_w_from.relations]
-  assert_sequence_equal(relations, ('bogus',))
+
+  eq_(qb_w_from.relation_name, 'bogus')
 
   q  = qb_w_from.query
   assert_is_instance(q, Query)
 
   assert_equal(
     q.schema,
-    dataset.get_relation('bogus').schema
+    dataset.get_schema('bogus')
   )
 
   assert_equal(
@@ -113,5 +113,23 @@ def test_projection_and_selection():
     ]
   )
 
+
+def test_order_by():
+  dataset = mock_data_set()
+  qb = QueryBuilder(dataset).frm('employees').order_by('employee_id')
+
+  assert_equal(
+    qb.query.operations,
+    [OrderByOp(Var('employee_id'))]
+  )
+
+def test_order_by_multiple():
+  dataset = mock_data_set()
+  qb = QueryBuilder(dataset).frm('employees').order_by('employee_id, full_name Desc, 123')
+
+  assert_equal(
+    qb.query.operations,
+    [OrderByOp(Var('employee_id'), Desc(Var('full_name')), NumberConst(123))]
+  )
 
 

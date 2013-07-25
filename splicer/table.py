@@ -1,7 +1,7 @@
 from .schema import Schema
 
 class Table(object):
-  def __init__(self, name, schema):
+  def __init__(self, server, name, schema):
     """
 
     Initialize a table with a name or a schema.
@@ -13,6 +13,8 @@ class Table(object):
 
     """
 
+
+    self.server = server
     self.name = name
 
     if isinstance(schema, dict):
@@ -24,7 +26,7 @@ class Table(object):
     return self.schema.fields
 
 
-  def rows(self, qualifiers, columns):
+  def __iter__(self):
     """
     Returns an iterator of tuples. 
 

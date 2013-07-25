@@ -5,15 +5,14 @@ Module used to interpret the AST into a schema based on a given relation.
 
 from .schema import Schema
 from .field import Field
-from .ast import ProjectionOp, SelectionOp, RenameOp, Var, Function, Const
+from .ast import ProjectionOp, SelectionOp, RenameOp, Var, Function, Const, UnaryOp, BinaryOp
 
-def interpret(dataset, relation, operations):
+def interpret(dataset, schema, operations):
   """
-  Given an ast and a dataset return the schema that will result
-  after all the operations of the AST are applied.
+  Returns the schema that will be produced if the given
+  operations are applied to the starting schema.
   """
   
-  schema = relation.schema
   for operation in operations:
     op_type = type(operation)
     dispatch = op_type_to_schemas.get(
@@ -32,6 +31,7 @@ def schema_from_projection_op(projection_op, dataset, schema):
   fields = []
   for expr in projection_op.exprs:
     fields.append(field_from_expr(expr, dataset, schema))
+
   return Schema(fields)
 
 def field_from_expr(expr, dataset, schema):
@@ -40,12 +40,28 @@ def field_from_expr(expr, dataset, schema):
   expr_type = type(expr)
   if expr_type == Var:
     return field_from_var(expr, schema)
-  elif issubclass(expr_type, ConstExpr):
+  elif issubclass(expr_type, Const):
     return field_from_const(expr)
-  elif expr_type == FunctionExpr:
+  elif expr_type == Function:
     return field_from_function(expr, dataset, schema)
   elif expr_type == RenameOp:
     return field_from_rename_op(expr, dataset, schema)
+  elif issubclass(expr_type, UnaryOp):
+    field = field_from_expr(expr.expr, dataset, schema)
+    return field.new(name="{0}({1})".format(expr_type.__name__, field.name))
+  elif issubclass(expr_type, BinaryOp):
+    lhs_field = field_from_expr(expr.lhs, dataset, schema)
+    rhs_field = field_from_expr(expr.lhs, dataset, schema)
+    if lhs_field.type != rhs_field.type:
+      raise ValueError(
+        "Can't coerce {} to {}".format(lhs_fielt.type, rhs_field.type)
+      )
+    else:
+      return lhs_field.new(name="{0}({1}, {2})".format(
+        expr_type.__name__, 
+        lhs_field.name,
+        rhs_field.name
+      ))
 
 
 def field_from_var(var_expr, schema):

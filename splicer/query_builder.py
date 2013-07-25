@@ -11,7 +11,7 @@ class QueryBuilder(object):
   __slots__ = {
     'dataset': '-> DataSet',
     'column_exps': 'str -- uparsed column',
-    'relations': '-> [Relation] -- list of relations that will be queried',
+    'relation_name': '-> str -- the root relation',
     'ordering': '-> [Field] -- results ',
     'grouping': '-> [Field]',
     'qualifiers': '-> str'
@@ -32,23 +32,26 @@ class QueryBuilder(object):
   def __init__(self, dataset):
     self.dataset = dataset
     self.column_exps = "*"
-    self.relations = ()
+    self.relation_name = None
     self.qualifiers = ()
     self.ordering = None
     self.grouping = None
 
+  def __iter__(self):
+    return iter(self.execute())
+
+  @property
+  def schema(self):
+    return self.query.schema
 
   def select(self, column_exps):
     return self.new(column_exps=column_exps)
 
   def frm(self, relation_name):
-    if isinstance(relation_name, basestring):
-      relation = self.dataset.get_relation(relation_name)
-      if relation is None:
-        raise ValueError, "No such relation {0}".format(relation_name)
-    else:
-      relation = relation_name
-    return self.new(relations=self.relations + (relation,))
+    if not self.dataset.has(relation_name):
+      raise ValueError, "No such relation {0}".format(relation_name)
+
+    return self.new(relation_name=relation_name)
 
   def where(self, qualifiers):
     return self.new(qualifiers=self.qualifiers + (qualifiers,))
@@ -56,7 +59,9 @@ class QueryBuilder(object):
   def group_by(self, *grouping):
     return self.new(grouping=grouping)
 
-  def order_by(self, *ordering):
+  def order_by(self, ordering_exp):
+    ordering = query_parser.parse_order_by(ordering_exp)
+
     return self.new(ordering=ordering)
 
   def limit(self, limit):
@@ -71,7 +76,7 @@ class QueryBuilder(object):
     Returns a valid query suitable for execution, or raises an exception.
     """
 
-    if not self.relations:
+    if not self.relation_name:
       raise ValueError('Need to specify at least one relation')
 
     operations = []
@@ -84,6 +89,9 @@ class QueryBuilder(object):
 
       operations.append(SelectionOp(bool_op))
 
+    if self.ordering:
+      operations.append(self.ordering)
+
     projection_op = query_parser.parse_select(self.column_exps)
 
     is_select_star = (
@@ -95,7 +103,7 @@ class QueryBuilder(object):
     if not is_select_star:
       operations.append(projection_op)
 
-    return Query(self.dataset, self.relations[0], operations)
+    return Query(self.dataset, self.relation_name, operations)
 
 
   def execute(self):

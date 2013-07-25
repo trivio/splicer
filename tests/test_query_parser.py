@@ -117,8 +117,8 @@ def test_parse_select_core():
   
   assert_is_instance(ast.exprs[1], RenameOp)
   eq_(ast.exprs[1].name, 'x2')
-  assert_is_instance(ast.exprs[1].exp, Var)
-  eq_(ast.exprs[1].exp.path, 'x')
+  assert_is_instance(ast.exprs[1].expr, Var)
+  eq_(ast.exprs[1].expr.path, 'x')
   
   assert_is_instance(ast.exprs[2], NumberConst)
   eq_(ast.exprs[2].const, 49929)

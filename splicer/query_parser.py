@@ -4,7 +4,6 @@ from codd import Tokens
 
 from . import Field
 from . import Schema
-
 from .ast import *
 
 
@@ -21,7 +20,8 @@ def parse(statement, root_exp = None):
 def parse_select(statement):
   return parse(statement, root_exp=select_core_exp)
 
-
+def parse_order_by(statement):
+  return parse(statement, root_exp=order_by_core_expr)
 
 ## parsing routines #######
 
@@ -194,3 +194,26 @@ def result_column_exp(tokens):
 
 def where_core_exp(tokens):
   return and_exp()
+
+def order_by_core_expr(tokens):
+  columns = []
+
+  while tokens:
+    col = value_exp(tokens)
+    if tokens: 
+      if tokens[0].lower() == "desc":
+        col = Desc(col)
+        tokens.pop(0)
+      elif tokens[0].lower() == "asc":
+        tokens.pop(0)
+        
+    columns.append(col)
+
+    if tokens:
+      if tokens[0] == ',':
+        tokens.pop(0)
+      else:
+        raise SyntaxError()
+
+
+  return OrderByOp(*columns)

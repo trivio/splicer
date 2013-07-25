@@ -28,6 +28,7 @@ class DictServer(object):
         schema = self.guess_schema(rows)
 
       self._tables[name] = DictTable(
+        self,
         name, 
         schema=schema, 
         rows=rows
@@ -41,14 +42,14 @@ class DictServer(object):
       for name, table in self._tables.items()
     ]
 
-  def get_table(self, name):
+  def get_relation(self, name):
     return self._tables.get(name)
 
 
 
 class DictTable(Table):
-  def __init__(self, name, schema, rows):
-    super(self.__class__, self).__init__(name, schema)
+  def __init__(self, server, name, schema, rows):
+    super(self.__class__, self).__init__(server, name, schema)
     self.key_index = [f.name for f in self.schema.fields]
     self._rows = rows
 

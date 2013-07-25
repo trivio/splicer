@@ -40,7 +40,7 @@ def test_dict_server_with_schemas():
     )
   )
 
-  employees = server.get_table('employees')
+  employees = server.get_relation('employees')
 
   assert_sequence_equal(
     employees.schema.fields,

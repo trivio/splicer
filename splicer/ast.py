@@ -144,9 +144,18 @@ ADDITIVE_OPS = {
 
 # sql specific expresions
 
+class Asc(UnaryOp):
+  """Sort from lowest to highest"""
+  __slots__ = ('expr',)
+  
+class Desc(UnaryOp):
+  """Sort from highest to lowest """
+  __slots__ = ('expr',)
+
+
 class ParamGetterOp(UnaryOp):
   """ ?<number> """
-  __slots__ = ('exp',)
+  __slots__ = ('expr',)
   
 
 class SelectAllExpr(Expr):
@@ -156,20 +165,23 @@ class SelectAllExpr(Expr):
     self.table = table
 
 class RenameOp(Expr):
-  __slots__ = ('name','exp')
+  __slots__ = ('name','expr')
 
-  def __init__(self, name, exp):
+  def __init__(self, name, expr):
     self.name = name
-    self.exp  = exp
-
+    self.expr  = expr
 
 class ProjectionOp(Expr):
   __slots__ = ('exprs',)
   def __init__(self, *exprs):
     self.exprs = exprs
 
-
 class SelectionOp(Expr):
   __slots__ = ('bool_op',)
   def __init__(self, bool_op):
     self.bool_op = bool_op
+
+class OrderByOp(Expr):
+  __slots__ = ('exprs',)
+  def __init__(self, first, *exprs):
+    self.exprs = (first,) + exprs

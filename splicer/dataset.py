@@ -8,6 +8,7 @@ class DataSet(object):
   def __init__(self):
     self.servers = []
     self.relation_cache = {}
+    self.schema_cache = {}
     self.executor = None
     self.compile = local.compile
 
@@ -28,7 +29,7 @@ class DataSet(object):
   @property
   def relations(self):
     """
-    Returns a list of all tabels from all servers
+    Returns a list of all relations from all servers
     note this could be a slow operation as remote
     calls must be made to each server. 
 
@@ -41,23 +42,35 @@ class DataSet(object):
     return self.relation_cache.items()
 
 
+  def has(self, name):
+    return self.get_relation(name)
+
   def get_relation(self, name):
-    """
-    Returns the first relation found with the given name.
+    """Returns the relation for the given name.
 
     The dataset will search all servers in the order the
-    servers were added to the dataset.
+    servers were added to the dataset returning the first 
+    relation with the given name.
     """
-
     relation = self.relation_cache.get(name)
     if relation is None:
       for server in self.servers:
-        relation = server.get_table(name)
+        relation = server.get_relation(name)
         if relation:
           self.relation_cache[name] = relation
           break
 
     return relation
+
+
+  def get_schema(self, name):
+    """
+    Returns the schema for relation found with the given name.
+
+    The search order is the same as dataset.get_relation()
+    """
+
+    return self.get_relation(name).schema
 
  
 
@@ -66,12 +79,14 @@ class DataSet(object):
 
 
   def execute(self, query, *params):
+
     callable = self.compile(query)
     ctx = {
-      'dataset': self
+      'dataset': self,
+      'params': params
     }
 
-    return callable(ctx, *params)
+    return callable(ctx)
 
   def query(self, statement):
     """Parses the statement and returns a Query"""

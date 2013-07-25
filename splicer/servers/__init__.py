@@ -11,7 +11,7 @@ class Server(object):
     Some Servers like HTTP etc.. will create tables on the fly
     based on the passed in URL so introspection is not possible
     """
-    return []
+    
     
   def get_table(self, name):
     """Return the relation (table, view, etc..) with the given name or None if this

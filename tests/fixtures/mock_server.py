@@ -4,6 +4,7 @@ class MockServer(object):
   def __init__(self):
     
     table = Table(
+      server = self,
       name = 'bogus',
       schema = dict(
         fields = [
@@ -30,5 +31,5 @@ class MockServer(object):
       for name, table in self._tables.items()
     ]
 
-  def get_table(self, name):
+  def get_relation(self, name):
     return self._tables.get(name)
