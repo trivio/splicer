@@ -4,8 +4,10 @@ from splicer import query_parser
 from splicer.ast import (
   NumberConst, StringConst, Var, Function, Tuple,
   NegOp, NotOp, MulOp, DivOp, ItemGetterOp, ParamGetterOp,
+  AddOp, SubOp,
+  And, Or,
 
-  ProjectionOp, SelectionOp, RenameOp
+  ProjectionOp, SelectionOp, RenameOp, SelectAllExpr
 )
 
 def test_parse_int():
@@ -35,10 +37,13 @@ def test_parse_mul():
   ast = query_parser.parse('1 *2')
   assert_is_instance(ast, MulOp)
 
-def test_parse_mul():
+def test_parse_div():
   ast = query_parser.parse('1 / 2')
   assert_is_instance(ast, DivOp)  
 
+def test_parse_add():
+  ast = query_parser.parse('1  + 2')
+  assert_is_instance(ast, AddOp)
 
 def test_parse_string():
   ast = query_parser.parse('"Hi mom"')
@@ -123,11 +128,22 @@ def test_parse_select_core():
   assert_is_instance(ast.exprs[2], NumberConst)
   eq_(ast.exprs[2].const, 49929)
 
+def test_parse_select_all():
+  ast = query_parser.parse_select('*')
+  eq_(ast, ProjectionOp(SelectAllExpr()))
+
+def test_parse_select_all_frm_table():
+  ast = query_parser.parse_select('table.*, x')
+  eq_(ast, ProjectionOp(SelectAllExpr('table'), Var('x')))
 
 
+def test_parse_and():
+  ast = query_parser.parse('x = 1 and z=2')
+  assert_is_instance(ast, And)
 
-
-
+def test_parse_or():
+  ast = query_parser.parse('x = 1 or z=2')
+  assert_is_instance(ast, Or)
 
 
 

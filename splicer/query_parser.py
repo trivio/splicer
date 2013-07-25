@@ -59,7 +59,7 @@ def additive_exp(tokens):
     Op = ADDITIVE_OPS.get(tokens[0])
     if Op:
       tokens.pop(0)
-      rhs =  multiplicative_exp(tokens)
+      rhs = multiplicative_exp(tokens)
       lhs = Op(lhs, rhs)
     else:
       break
@@ -152,9 +152,10 @@ def function_exp(name, tokens):
   args = tuple_exp(tokens)
   return Function(name, *args.exps)
 
-def var_exp(name, tokens):
+def var_exp(name, tokens, allowed=string.letters + '_'):
   path = [name]
-  while len(tokens) >= 2 and tokens[0] == '.' and tokens[1][0] in string.letters:
+
+  while len(tokens) >= 2 and tokens[0] == '.' and tokens[1][0] in allowed:
     tokens.pop(0) # '.'
     path.append(tokens.pop(0)) 
 
@@ -175,12 +176,14 @@ def select_core_exp(tokens):
   return ProjectionOp(*columns)
 
 def result_column_exp(tokens):
+
   if tokens[0] == '*':
     tokens.pop(0)
     return SelectAllExpr()
   else:
     exp = value_exp(tokens)
-    if tokens and isinstance(exp, Var) and tokens[0] == '*':
+    if tokens and isinstance(exp, Var) and tokens[:2] == ['.','*']:
+      tokens.pop(0) # '.'
       tokens.pop(0) # '*'
       return SelectAllExpr(exp.path)
     else:
@@ -206,7 +209,7 @@ def order_by_core_expr(tokens):
         tokens.pop(0)
       elif tokens[0].lower() == "asc":
         tokens.pop(0)
-        
+
     columns.append(col)
 
     if tokens:
