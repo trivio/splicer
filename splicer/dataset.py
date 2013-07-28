@@ -1,7 +1,9 @@
 from .query import Query
 from .query_builder import QueryBuilder
 
+from aggregate import Aggregate
 from .compilers import local
+from .field import Field
 
 class DataSet(object):
 
@@ -11,6 +13,16 @@ class DataSet(object):
     self.schema_cache = {}
     self.executor = None
     self.compile = local.compile
+    self.udfs = {}
+
+    self.aggregates = {
+      "count": Aggregate(
+        function=lambda state: state + 1,
+        returns=Field(name="count", type="INTEGER"),
+        initial=0
+      )
+    }
+
 
 
   def add_server(self, server):
@@ -25,6 +37,40 @@ class DataSet(object):
     if server not in self.servers:
       self.servers.append(server)
 
+
+  def function(self, returns=None, name=None):
+    """Decorator for registering functions
+
+    @dataset.function
+    def somefunction():
+      pass
+
+
+    """
+
+    def _(func, name=name):
+      if name is None:
+        name = func.__name__
+      self.add_function(name, func, returns)
+    return _ 
+
+
+
+  def add_function(self, name, function, returns=None):
+    if returns:
+      function.returns = Field(**returns)
+    else:
+      function.returns = None
+
+
+    self.udfs[name] = function
+
+  def get_function(self, name):
+    function = self.udfs.get(name) or self.aggregates.get(name)
+    if function:
+      return function
+    else:
+      raise NameError("No function named {}".format(name))
 
   @property
   def relations(self):
@@ -98,5 +144,3 @@ class DataSet(object):
   def select(self, *cols):
     return QueryBuilder(self).select(*cols)
 
-  def udfs(self):
-    return {}

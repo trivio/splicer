@@ -1,7 +1,8 @@
 from . import Query
-from .ast import SelectionOp, And, SelectAllExpr
+from .ast import SelectionOp, And, SelectAllExpr, GroupByOp
 import query_parser
 
+from .compilers.local import is_aggregate
 
 class QueryBuilder(object):
   """
@@ -35,7 +36,7 @@ class QueryBuilder(object):
     self.relation_name = None
     self.qualifiers = ()
     self.ordering = None
-    self.grouping = None
+    self.grouping = []
 
   def __iter__(self):
     return iter(self.execute())
@@ -56,8 +57,9 @@ class QueryBuilder(object):
   def where(self, qualifiers):
     return self.new(qualifiers=self.qualifiers + (qualifiers,))
 
-  def group_by(self, *grouping):
-    return self.new(grouping=grouping)
+  def group_by(self, grouping_statement):
+    exprs = query_parser.parse_group_by(grouping_statement)
+    return self.new(grouping=exprs)
 
   def order_by(self, ordering_exp):
     ordering = query_parser.parse_order_by(ordering_exp)
@@ -89,21 +91,42 @@ class QueryBuilder(object):
 
       operations.append(SelectionOp(bool_op))
 
-    if self.ordering:
-      operations.append(self.ordering)
 
     projection_op = query_parser.parse_select(self.column_exps)
 
-    is_select_star = (
-      len(projection_op.exprs) == 1
-      and isinstance(projection_op.exprs[0], SelectAllExpr)
-      and projection_op.exprs[0].table is None
 
-    )
-    if not is_select_star:
-      operations.append(projection_op)
+
+
+    if self.grouping or self.has_aggregates(projection_op):
+      operations.append(GroupByOp(projection_op, *self.grouping))
+      if self.ordering:
+        # todo: eleminate ordering if it matches
+        # the grouping since we already sort
+        operations.append(self.ordering)
+    else:
+      if self.ordering:
+        operations.append(self.ordering)
+      # todo: this optimization that should be moved to 
+      # the query rewriting phase
+      is_select_star = (
+        len(projection_op.exprs) == 1
+        and isinstance(projection_op.exprs[0], SelectAllExpr)
+        and projection_op.exprs[0].table is None
+
+      )
+      if not is_select_star:
+        operations.append(projection_op)
 
     return Query(self.dataset, self.relation_name, operations)
+
+
+  def has_aggregates(self, projection_op):
+    """Returns true if the projection has aggregates"""
+    for expr in projection_op.exprs:
+      if is_aggregate(expr, self.dataset):
+        return True
+    else:
+      return False
 
 
   def execute(self):

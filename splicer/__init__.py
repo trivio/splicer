@@ -4,3 +4,4 @@ from .query import Query
 from .table import Table
 
 from .dataset import DataSet
+from .relation import Relation

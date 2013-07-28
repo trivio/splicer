@@ -4,7 +4,7 @@ from splicer import query_parser
 from splicer.ast import (
   NumberConst, StringConst, Var, Function, Tuple,
   NegOp, NotOp, MulOp, DivOp, ItemGetterOp, ParamGetterOp,
-  AddOp, SubOp,
+  AddOp, SubOp, 
   And, Or,
 
   ProjectionOp, SelectionOp, RenameOp, SelectAllExpr
@@ -76,6 +76,8 @@ def test_parse_function_no_args():
   assert_is_instance(ast, Function)
   eq_(ast.name, "foo")
   eq_(ast.args, ())
+
+
 
 def test_parse_incomplete_function():
   assert_raises(SyntaxError, query_parser.parse, 'foo(')

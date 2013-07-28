@@ -1,3 +1,5 @@
+from ast import ProjectionOp, GroupByOp, Function
+
 from .schema_interpreter import interpret as interpret_schema
 class Query(object):
   __slots__ = {
@@ -12,6 +14,11 @@ class Query(object):
     self.relation_name = relation_name
     self.operations = operations
 
+
+  def __iter__(self):
+    return self.execute()
+
+
   @property
   def schema(self):
     schema = self.dataset.get_schema(self.relation_name)
@@ -20,5 +27,6 @@ class Query(object):
   def execute(self, *params):
     return self.dataset.execute(self, *params)
 
-  def __iter__(self):
-    return self.execute()
+
+
+

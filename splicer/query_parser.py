@@ -14,7 +14,7 @@ def parse(statement, root_exp = None):
   tokens = list(Tokens(statement))
   exp = root_exp(tokens)
   if tokens: 
-    raise SyntaxError('Incomplete staement')
+    raise SyntaxError('Incomplete statement')
   return exp
 
 def parse_select(statement):
@@ -22,6 +22,10 @@ def parse_select(statement):
 
 def parse_order_by(statement):
   return parse(statement, root_exp=order_by_core_expr)
+
+def parse_group_by(statement):
+  return parse(statement, root_exp=group_by_core_expr)
+
 
 ## parsing routines #######
 
@@ -169,7 +173,9 @@ def select_core_exp(tokens):
   columns = []
 
   while tokens:
-    columns.append(result_column_exp(tokens))
+    col = result_column_exp(tokens)
+
+    columns.append(col)
     if tokens and tokens[0] == ',':
       tokens.pop(0)
 
@@ -220,3 +226,16 @@ def order_by_core_expr(tokens):
 
 
   return OrderByOp(*columns)
+
+def group_by_core_expr(tokens):
+
+  columns = []
+  while tokens:
+    token = tokens.pop(0)
+    columns.append(var_exp(token, tokens))
+    if tokens and tokens[0] == ',':
+      tokens.pop(0)
+
+  # can't return GroupByOp because it needs a valid
+  # ProjectionOp build, so we let the parser consrtruct that
+  return columns

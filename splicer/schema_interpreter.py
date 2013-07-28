@@ -5,7 +5,10 @@ Module used to interpret the AST into a schema based on a given relation.
 
 from .schema import Schema
 from .field import Field
-from .ast import ProjectionOp, SelectionOp, RenameOp, Var, Function, Const, UnaryOp, BinaryOp
+from .ast import (
+  ProjectionOp, SelectionOp, GroupByOp, RenameOp, Var, Function, 
+  Const, UnaryOp, BinaryOp
+)
 
 def interpret(dataset, schema, operations):
   """
@@ -33,6 +36,13 @@ def schema_from_projection_op(projection_op, dataset, schema):
     fields.append(field_from_expr(expr, dataset, schema))
 
   return Schema(fields)
+
+def schema_from_group_by_op(group_by_op, dataset, schema):
+  return schema_from_projection_op(
+    group_by_op.projection_op, 
+    dataset, 
+    schema
+  )
 
 def field_from_expr(expr, dataset, schema):
   """
@@ -70,12 +80,23 @@ def field_from_var(var_expr, schema):
 def field_from_function(function_expr, dataset, schema):
   name = function_expr.name
   function = dataset.get_function(function_expr.name)
-  return Field(name=name, type=function.return_type)
+
+  if function.returns:
+    return function.returns
+  elif len(function_expr.args):
+    # no return type specified guess the type based on the first
+    # argument. Dataset.add_function should prevent functions
+    # from being registered without args and return_types
+    return field_from_expr(function_expr.args[0], dataset, schema)
+  else:
+    raise ValueError("Can not determine return type of Function {}".format(name))
+
 
 def field_from_rename_op(expr, dataset, schema):
   field = field_from_expr(expr.expr, dataset, schema)
   return field.new(name=expr.name)
 
 op_type_to_schemas = {
-  ProjectionOp: schema_from_projection_op
+  ProjectionOp: schema_from_projection_op,
+  GroupByOp: schema_from_group_by_op
 }

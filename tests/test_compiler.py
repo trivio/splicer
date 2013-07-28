@@ -12,8 +12,6 @@ def test_projection():
   dataset = DataSet()
   dataset.add_server(EmployeeServer())
 
-
-
   q = Query(
     dataset, 
     'employees', 
@@ -116,11 +114,111 @@ def test_order_by_asc():
   )
   evaluate = compile(q)
 
-  assert_sequence_equal(
-    list(evaluate(dict(dataset=dataset))),
+  assert_sequence_equal(list(evaluate(dict(dataset=dataset)))
+    ,
     [
       (1234, 'Tom Tompson', date(2009, 1, 17), None),
       (4567, 'Sally Sanders', date(2010, 2, 24), 1234),
       (8901, 'Mark Markty', date(2010, 3, 1), 1234),
     ]
   )
+
+def test_function_calls():
+  dataset = DataSet()
+  dataset.add_server(EmployeeServer())
+
+  dataset.add_function(
+    name = 'initials', 
+    function = lambda name: ''.join([p[0] for p in name.split()]) if name else None,
+    returns = dict(name="initials", type="STRING")
+  )
+
+
+  q = Query(
+    dataset, 
+    'employees', 
+    [ProjectionOp(Function('initials', Var('full_name')))]
+  )
+  evaluate = compile(q)
+
+  assert_sequence_equal(
+    list(evaluate(dict(dataset=dataset))),
+    [
+      ('TT',),
+      ('SS',),
+      ('MM',),
+    ]
+  )
+
+
+def test_decorator_function_calls():
+  dataset = DataSet()
+  dataset.add_server(EmployeeServer())
+
+  @dataset.function(returns=dict(name="initials", type="STRING"))
+  def initials(name):
+    if name:
+      return ''.join([p[0] for p in name.split()])
+    else:
+      return None
+
+ 
+
+  q = Query(
+    dataset, 
+    'employees', 
+    [ProjectionOp(Function('initials', Var('full_name')))]
+  )
+  evaluate = compile(q)
+
+  assert_sequence_equal(
+    list(evaluate(dict(dataset=dataset))),
+    [
+      ('TT',),
+      ('SS',),
+      ('MM',),
+    ]
+  )
+
+def test_aggregation_whole_table():
+  dataset = DataSet()
+  dataset.add_server(EmployeeServer())
+
+  q = Query(
+    dataset, 
+    'employees', 
+    [GroupByOp(ProjectionOp(Function('count')))]
+  )
+  evaluate = compile(q)
+
+  assert_sequence_equal(
+    list(evaluate(dict(dataset=dataset))),
+    [
+      (3,),
+    ]
+  )
+
+
+def test_aggregation_on_column():
+  dataset = DataSet()
+  dataset.add_server(EmployeeServer())
+
+  q = Query(
+    dataset, 
+    'employees', 
+    [GroupByOp(
+      ProjectionOp(Var('manager_id'), Function('count')), 
+      Var('manager_id')
+    )]
+  )
+  evaluate = compile(q)
+
+  assert_sequence_equal(
+    list(evaluate(dict(dataset=dataset))),
+    [
+      (None,1),
+      (1234,2)
+    ]
+  )
+
+

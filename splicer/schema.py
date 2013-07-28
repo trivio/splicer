@@ -3,7 +3,8 @@ from .field import Field
 class Schema(object):
   __slots__ = {
     'fields': '-> [Field]',
-    '_field_map': '-> {<name:str>: Field}'
+    '_field_map': '-> {<name:str>: Field}',
+    '_field_pos': '-> {<name:str>: postion:int}'
   }
   
   def __init__(self, fields):
@@ -31,7 +32,11 @@ class Schema(object):
     return fm
 
   def field_position(self, path):
-    return [i for i,f in enumerate(self.fields) if f.name == path][0]
+    pos = getattr(self, '_field_pos', None)
+    if pos is None:
+      self._field_pos = pos = { f.name:i for i,f in enumerate(self.fields) }
+
+    return pos[path]
 
   def to_dict(self):
     return dict(fields=[f.to_dict() for f in self.fields])

@@ -120,6 +120,7 @@ class Function(Expr):
   def __init__(self, name, *args):
     self.name = name
     self.args = args
+
   
 
 COMPARISON_OPS = {
@@ -185,3 +186,10 @@ class OrderByOp(Expr):
   __slots__ = ('exprs',)
   def __init__(self, first, *exprs):
     self.exprs = (first,) + exprs
+
+class GroupByOp(Expr):
+  __slots__ = ('exprs','projection_op')
+  def __init__(self, projection_op, *exprs):
+    self.projection_op = projection_op
+    self.exprs =  exprs
+    

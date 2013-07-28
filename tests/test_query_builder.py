@@ -2,8 +2,11 @@ from nose.tools import *
 
 from splicer import Query, Schema, Field
 from splicer.query_builder import  QueryBuilder
-from splicer.ast import ProjectionOp, SelectionOp, Var, EqOp, NumberConst, OrderByOp, Desc
-
+from splicer.ast import (
+  ProjectionOp, SelectionOp, GroupByOp,
+  Var, EqOp, NumberConst, OrderByOp, Desc,
+  Function, RenameOp
+)
 from .fixtures import mock_data_set
 
 
@@ -132,4 +135,58 @@ def test_order_by_multiple():
     [OrderByOp(Var('employee_id'), Desc(Var('full_name')), NumberConst(123))]
   )
 
+def test_group_by():
+  dataset = mock_data_set()
 
+  qb = QueryBuilder(dataset).select(
+    'manager_id, count()'
+  ).frm(
+    'employees'
+  ).group_by(
+    'manager_id'
+  )
+
+  assert_equal(
+    qb.query.operations,
+    [GroupByOp(
+      ProjectionOp(Var('manager_id'), Function('count')), 
+      Var('manager_id')
+    )]
+  )
+
+
+def test_all_aggregates():
+  """Aggregation is possible if all the selected columns are aggregate functions"""
+
+  dataset = mock_data_set()
+
+  qb = QueryBuilder(dataset).select(
+    'count()'
+  ).frm(
+    'employees'
+  )
+
+  assert_equal(
+    qb.query.operations,
+    [GroupByOp(
+      ProjectionOp(Function('count'))
+    )]
+  )
+
+def test_all_count_aliased():
+  """Aggregation is possible if all the selected columns are aggregate functions"""
+
+  dataset = mock_data_set()
+
+  qb = QueryBuilder(dataset).select(
+    'count() as total'
+  ).frm(
+    'employees'
+  )
+
+  assert_equal(
+    qb.query.operations,
+    [GroupByOp(
+      ProjectionOp(RenameOp('total', Function('count')))
+    )]
+  )
