@@ -221,4 +221,59 @@ def test_aggregation_on_column():
     ]
   )
 
+def test_limit():
+  dataset = DataSet()
+  dataset.add_server(EmployeeServer())
+
+  q = Query(
+    dataset, 
+    'employees', 
+    [SliceOp(1)]
+  )
+  evaluate = compile(q)
+
+  assert_sequence_equal(
+    list(evaluate(dict(dataset=dataset))),
+    [
+      (1234, 'Tom Tompson', date(2009, 1, 17), None),
+    ]
+  )
+
+def test_offset():
+  dataset = DataSet()
+  dataset.add_server(EmployeeServer())
+
+  q = Query(
+    dataset, 
+    'employees', 
+    [SliceOp(1,None)]
+  )
+  evaluate = compile(q)
+
+  assert_sequence_equal(
+    list(evaluate(dict(dataset=dataset))),
+    [
+      (4567, 'Sally Sanders', date(2010, 2, 24), 1234),
+      (8901, 'Mark Markty', date(2010, 3, 1), 1234),
+ 
+    ]
+  )
+
+def test_offset_and_limit():
+  dataset = DataSet()
+  dataset.add_server(EmployeeServer())
+
+  q = Query(
+    dataset, 
+    'employees', 
+    [SliceOp(1,2)]
+  )
+  evaluate = compile(q)
+
+  assert_sequence_equal(
+    list(evaluate(dict(dataset=dataset))),
+    [
+      (4567, 'Sally Sanders', date(2010, 2, 24), 1234),
+    ]
+  )
 

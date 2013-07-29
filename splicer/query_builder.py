@@ -1,5 +1,5 @@
 from . import Query
-from .ast import SelectionOp, And, SelectAllExpr, GroupByOp
+from .ast import SelectionOp, And, SelectAllExpr, GroupByOp, SliceOp
 import query_parser
 
 from .compilers.local import is_aggregate
@@ -15,7 +15,9 @@ class QueryBuilder(object):
     'relation_name': '-> str -- the root relation',
     'ordering': '-> [Field] -- results ',
     'grouping': '-> [Field]',
-    'qualifiers': '-> str'
+    'qualifiers': '-> str',
+    'stop': "int",
+    'start': "int"
   }
 
 
@@ -37,6 +39,8 @@ class QueryBuilder(object):
     self.qualifiers = ()
     self.ordering = None
     self.grouping = []
+    self.start = None
+    self.stop = None
 
   def __iter__(self):
     return iter(self.execute())
@@ -67,10 +71,10 @@ class QueryBuilder(object):
     return self.new(ordering=ordering)
 
   def limit(self, limit):
-    return self.new(limit=limit)
+    return self.new(stop=limit)
 
   def offset(self, offset):
-    return self.new(offset=offset)
+    return self.new(start=offset)
 
   @property
   def query(self):
@@ -116,6 +120,13 @@ class QueryBuilder(object):
       )
       if not is_select_star:
         operations.append(projection_op)
+
+    if self.stop is not None or self.start is not None:
+      if self.start and self.stop:
+        stop = self.start + self.stop
+      else:
+        stop = self.stop 
+      operations.append(SliceOp(self.start, stop))
 
     return Query(self.dataset, self.relation_name, operations)
 

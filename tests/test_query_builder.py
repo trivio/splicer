@@ -5,7 +5,7 @@ from splicer.query_builder import  QueryBuilder
 from splicer.ast import (
   ProjectionOp, SelectionOp, GroupByOp,
   Var, EqOp, NumberConst, OrderByOp, Desc,
-  Function, RenameOp
+  Function, RenameOp, SliceOp
 )
 from .fixtures import mock_data_set
 
@@ -189,4 +189,50 @@ def test_all_count_aliased():
     [GroupByOp(
       ProjectionOp(RenameOp('total', Function('count')))
     )]
+  )
+
+def test_limit():
+
+  dataset = mock_data_set()
+
+  qb = QueryBuilder(dataset).frm(
+    'employees'
+  ).limit(1)
+
+
+  assert_equal(
+    qb.query.operations,
+    [
+      SliceOp(None,1)
+    ]
+  )
+
+def test_offset():
+
+  dataset = mock_data_set()
+
+  qb = QueryBuilder(dataset).frm(
+    'employees'
+  ).offset(1)
+
+  assert_equal(
+    qb.query.operations,
+    [
+      SliceOp(1,None)
+    ]
+  )
+
+def test_offset_and_limit():
+
+  dataset = mock_data_set()
+
+  qb = QueryBuilder(dataset).frm(
+    'employees'
+  ).offset(1).limit(1)
+
+  assert_equal(
+    qb.query.operations,
+    [
+      SliceOp(1,2)
+    ]
   )

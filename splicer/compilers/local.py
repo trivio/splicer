@@ -1,5 +1,7 @@
 import operator
 from functools import partial
+from itertools import islice
+
 from ..ast import *
 from ..aggregate import Aggregate
 from ..relation import Relation
@@ -86,6 +88,7 @@ def group_by_op(operation, dataset):
   order_by   = order_by_op(operation, dataset) 
   projection = projection_op(operation.projection_op, dataset)
 
+
   exprs      = operation.projection_op.exprs
 
   aggs       = aggregates(exprs, dataset)
@@ -96,28 +99,55 @@ def group_by_op(operation, dataset):
 
 
   def group_by(relation, ctx):
+    if operation.exprs:
+      ordered_relation = order_by(projection(relation, ctx), ctx)
+      key = key_op(operation.exprs, ordered_relation.schema)
+    else:
+      # it's all aggregates with no group by elements
+      # so no need to order the table
+      ordered_relation = projection(relation, ctx)
+      key = lambda row,ctx: None
 
+    schema = schema_from_projection_op(
+      operation, 
+      dataset, 
+      ordered_relation.schema
+    )
 
-    ordered_relation = order_by(projection(relation, ctx), ctx)
-    key = key_op(operation.exprs, ordered_relation.schema)
-    records = iter(ordered_relation)
+    def group():
+      records = iter(ordered_relation)
 
-    row = records.next()
-    group = key(row, ctx)
-    
-    record = accumalate(initialize(row), row)
+      row = records.next()
+      group = key(row, ctx)
+      
+      record = accumalate(initialize(row), row)
 
-    for row in records:
-      next = key(row, ctx)
-      if next != group:
-        yield finalize(record)
-        group = next
-        record = initialize(row)
-      previous_row = accumalate(record, row)
+      for row in records:
+        next = key(row, ctx)
+        if next != group:
+          yield finalize(record)
+          group = next
+          record = initialize(row)
+        previous_row = accumalate(record, row)
 
-    yield finalize(record)
+      yield finalize(record)
+
+    return Relation(
+      schema,
+      group()
+    )
   return group_by
 
+
+
+def slice_op(expr, dataset):
+
+  def limit(relation, ctx):
+    return Relation(
+      relation.schema,
+      islice(relation, expr.start, expr.stop)
+    )
+  return limit
 
 def is_aggregate(expr, dataset):
   """Returns true if the expr is an aggregate function."""
@@ -309,5 +339,6 @@ RELATION_OPS = {
   SelectionOp: selection_op,
   OrderByOp: order_by_op,
   GroupByOp: group_by_op,
+  SliceOp: slice_op
   
 }

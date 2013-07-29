@@ -192,4 +192,13 @@ class GroupByOp(Expr):
   def __init__(self, projection_op, *exprs):
     self.projection_op = projection_op
     self.exprs =  exprs
+
+class SliceOp(Expr):
+  __slots__ = ('start','stop')
+  def __init__(self, *args):
+    if len(args) == 1:
+      self.start = 0
+      self.stop = args[0]
+    else:
+      self.start, self.stop = args
     
