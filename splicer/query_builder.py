@@ -43,7 +43,7 @@ class QueryBuilder(object):
     self.stop = None
 
   def __iter__(self):
-    return self.execute()
+    return iter(self.execute())
 
   @property
   def schema(self):
