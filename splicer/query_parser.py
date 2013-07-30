@@ -20,6 +20,13 @@ def parse(statement, root_exp = None):
 def parse_select(statement):
   return parse(statement, root_exp=select_core_exp)
 
+def parse_from(statement):
+  return parse(statement, root_exp=from_core_exp)
+
+def parse_join(statement, left):
+  return parse(statement, root_exp=lambda tokens: join_core_exp(tokens, left))
+
+
 def parse_order_by(statement):
   return parse(statement, root_exp=order_by_core_expr)
 
@@ -154,7 +161,7 @@ def function_exp(name, tokens):
   assert token == '('
 
   args = tuple_exp(tokens)
-  return Function(name, *args.exps)
+  return Function(name, *args.exprs)
 
 def var_exp(name, tokens, allowed=string.letters + '_'):
   path = [name]
@@ -180,6 +187,35 @@ def select_core_exp(tokens):
       tokens.pop(0)
 
   return ProjectionOp(*columns)
+
+def from_core_exp(tokens):
+  left = join_core_exp(tokens, None).right
+
+  while tokens:
+    assert tokens[0] == ','
+    tokens.pop(0)
+    left = join_core_exp(tokens, left)
+
+  return left
+
+def join_core_exp(tokens, left):
+  load_op = LoadOp(tokens.pop(0))
+  if tokens:
+    if tokens[0] == 'as':
+      tokens.pop(0)
+
+  if tokens:
+    if tokens[0] != ',':
+      alias = tokens.pop(0)
+      load_op = AliasOp(alias, load_op)
+
+
+  return JoinOp(load_op, left)
+
+
+
+
+
 
 def result_column_exp(tokens):
 

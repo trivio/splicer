@@ -10,21 +10,16 @@ from ..schema_interpreter import field_from_expr, schema_from_projection_op
 
 def compile(query):
 
-
-  plan = query.operations
-  operations = tuple(
+  plan = tuple(
     relational_op(op, query.dataset)
-    for op in plan
+    for op in query.operations
   )
-
-  if isinstance(query.relation_name, basestring):
-    load = load_op(LoadOp(query.relation_name), query.dataset)
-  else:
-    load = query.relation_name
 
   def evaluate(ctx, *params):
 
-    relation = load()
+    load, operations = plan[0], plan[1:]
+ 
+    relation = load(ctx)
 
     for op in operations:
       relation = op(relation, ctx)
@@ -33,7 +28,7 @@ def compile(query):
   return evaluate
 
 def load_op(operation, dataset):
-  def load():
+  def load(ctx):
     return dataset.get_relation(operation.name)
   return load
 
@@ -43,7 +38,14 @@ def alias_op(operation, dataset):
       relation.schema.new(name=operation.name),
       iter(relation)
     )
-  return alias
+
+  if operation.relation:
+
+    load = relational_op(operation.relation, dataset)
+
+    return lambda ctx: alias(load(ctx), ctx)
+  else:
+    return alias
 
 def relational_op(operation, dataset):
   return RELATION_OPS[type(operation)](operation, dataset)
@@ -95,10 +97,11 @@ def selection_op(operation, dataset):
   return selection
 
 def join_op(operation, dataset):
-  right = operation.right
+  right_op = relational_op(operation.right, dataset)
 
 
   def join(relation, ctx):
+    right = right_op(ctx)
 
     schema = JoinSchema(
       relation.schema,
@@ -120,19 +123,17 @@ def join_op(operation, dataset):
         for row in ( 
           left_row + right_row 
           for left_row in relation
-          for right_row in iter(right)
+          for right_row in right_op(ctx)
         ) if comparison(row,ctx)
       )
     )
 
 
-    #for l_r in relation:
-    #  for r_s in iter(right):
-    #    row = l_r + r_s
-    #    if comparison(row, ctx):
-    #      yield row
-
-  return join
+  if operation.left:
+    load = relational_op(operation.left, dataset)
+    return lambda ctx: join(load(ctx), ctx)
+  else:
+    return join
 
 
 
@@ -437,6 +438,6 @@ RELATION_OPS = {
   OrderByOp: order_by_op,
   GroupByOp: group_by_op,
   SliceOp: slice_op,
-  EquiJoinOp: join_op
+  JoinOp: join_op
   
 }

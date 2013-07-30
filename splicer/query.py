@@ -5,13 +5,11 @@ class Query(object):
   __slots__ = {
     'dataset': '-> DataSet',
     'operations': '-> [Operations]',
-    'relation_name': 'str'
   }
 
 
-  def __init__(self, dataset, relation_name, operations):
+  def __init__(self, dataset,  operations):
     self.dataset = dataset
-    self.relation_name = relation_name
     self.operations = operations
 
 
@@ -21,8 +19,7 @@ class Query(object):
 
   @property
   def schema(self):
-    schema = self.dataset.get_schema(self.relation_name)
-    return interpret_schema(self.dataset, schema, self.operations)
+    return interpret_schema(self.dataset,  self.operations)
     
   def execute(self, *params):
     return self.dataset.execute(self, *params)

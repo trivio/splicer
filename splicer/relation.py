@@ -17,9 +17,5 @@ class Relation(object):
     self.iterator = iterator
 
 
-  @property
-  def fields(self):
-    return self.schema.fields
-
   def __iter__(self):
     return self.iterator

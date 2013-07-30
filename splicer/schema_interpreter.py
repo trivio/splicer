@@ -10,12 +10,14 @@ from .ast import (
   Const, UnaryOp, BinaryOp, AliasOp, SelectAllExpr
 )
 
-def interpret(dataset, schema, operations):
+def interpret(dataset, operations):
   """
   Returns the schema that will be produced if the given
   operations are applied to the starting schema.
   """
-  
+  load, operations = operations[0], operations[1:]
+  schema = schema_from_load(load, dataset)
+
   for operation in operations:
     op_type = type(operation)
     dispatch = op_type_to_schemas.get(
@@ -25,6 +27,9 @@ def interpret(dataset, schema, operations):
     schema = dispatch(operation, dataset, schema)
 
   return schema
+
+def schema_from_load(operation, dataset):
+  return dataset.get_relation(operation.name).schema
 
 def schema_from_projection_op(projection_op, dataset, schema):
   """
@@ -107,11 +112,11 @@ def field_from_function(function_expr, dataset, schema):
 
   if function.returns:
     return function.returns
-  elif len(function_expr.args):
-    # no return type specified guess the type based on the first
-    # argument. Dataset.add_function should prevent functions
-    # from being registered without args and return_types
-    return field_from_expr(function_expr.args[0], dataset, schema)
+  #elif len(function_expr.args):
+  #  # no return type specified guess the type based on the first
+  #  # argument. Dataset.add_function should prevent functions
+  #  # from being registered without args and return_types
+  #  return field_from_expr(function_expr.args[0], dataset, schema)
   else:
     raise ValueError("Can not determine return type of Function {}".format(name))
 

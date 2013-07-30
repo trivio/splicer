@@ -2,12 +2,18 @@ from nose.tools import *
 
 from splicer import Query, Schema, Field
 from splicer.query_builder import  QueryBuilder
-from splicer.ast import (
-  ProjectionOp, SelectionOp, GroupByOp,
-  Var, EqOp, NumberConst, OrderByOp, Desc,
-  Function, RenameOp, SliceOp
-)
+from splicer.ast import *
+
 from .fixtures import mock_data_set
+
+
+def test_execute():
+  dataset = mock_data_set()
+  qb = QueryBuilder(dataset).frm('employees')
+  eq_(
+    list(qb.execute()),
+    list(dataset.frm('employees').execute())
+  )
 
 
 def test_from_bogus():
@@ -20,7 +26,7 @@ def test_from_bogus():
   assert_is_not(qb, qb_w_from)
 
 
-  eq_(qb_w_from.relation_name, 'bogus')
+  #eq_(qb_w_from.relation_name, 'bogus')
 
   q  = qb_w_from.query
   assert_is_instance(q, Query)
@@ -32,7 +38,7 @@ def test_from_bogus():
 
   assert_equal(
     q.operations,
-    []
+    [LoadOp('bogus')]
   )
 
 
@@ -65,7 +71,7 @@ def test_select():
 
   assert_equal(
     q.operations,
-    [ProjectionOp(Var('x'), Var('y'))]
+    [LoadOp('bogus'), ProjectionOp(Var('x'), Var('y'))]
   )
 
   qb_select_y_from_bogus = qb.select('y').frm('bogus')
@@ -80,7 +86,7 @@ def test_select():
 
   assert_equal(
     qb_select_y_from_bogus.query.operations,
-    [ProjectionOp(Var('y'))]
+    [LoadOp('bogus'), ProjectionOp(Var('y'))]
   )
 
 
@@ -90,7 +96,7 @@ def test_where():
 
   assert_equal(
     qb.query.operations,
-    [SelectionOp(EqOp(Var('employee_id'), NumberConst(123)))]
+    [LoadOp('employees'), SelectionOp(EqOp(Var('employee_id'), NumberConst(123)))]
   )
 
 def test_projection_and_selection():
@@ -104,6 +110,7 @@ def test_projection_and_selection():
   assert_equal(
     query.operations,
     [
+      LoadOp('employees'),
       SelectionOp(EqOp(Var('employee_id'), NumberConst(123))),
       ProjectionOp(Var('full_name'))
     ]
@@ -123,16 +130,24 @@ def test_order_by():
 
   assert_equal(
     qb.query.operations,
-    [OrderByOp(Var('employee_id'))]
+    [
+      LoadOp('employees'),
+      OrderByOp(Var('employee_id'))
+    ]
   )
 
 def test_order_by_multiple():
   dataset = mock_data_set()
-  qb = QueryBuilder(dataset).frm('employees').order_by('employee_id, full_name Desc, 123')
+  qb = QueryBuilder(dataset).frm('employees').order_by(
+    'employee_id, full_name Desc, 123'
+  )
 
   assert_equal(
     qb.query.operations,
-    [OrderByOp(Var('employee_id'), Desc(Var('full_name')), NumberConst(123))]
+    [
+      LoadOp('employees'),
+      OrderByOp(Var('employee_id'), Desc(Var('full_name')), NumberConst(123))
+    ]
   )
 
 def test_group_by():
@@ -148,10 +163,13 @@ def test_group_by():
 
   assert_equal(
     qb.query.operations,
-    [GroupByOp(
-      ProjectionOp(Var('manager_id'), Function('count')), 
-      Var('manager_id')
-    )]
+    [
+      LoadOp('employees'),
+      GroupByOp(
+        ProjectionOp(Var('manager_id'), Function('count')), 
+        Var('manager_id')
+      )
+    ]
   )
 
 
@@ -168,9 +186,12 @@ def test_all_aggregates():
 
   assert_equal(
     qb.query.operations,
-    [GroupByOp(
-      ProjectionOp(Function('count'))
-    )]
+    [
+      LoadOp('employees'),
+      GroupByOp(
+       ProjectionOp(Function('count'))
+      )
+    ]
   )
 
 def test_all_count_aliased():
@@ -186,9 +207,12 @@ def test_all_count_aliased():
 
   assert_equal(
     qb.query.operations,
-    [GroupByOp(
-      ProjectionOp(RenameOp('total', Function('count')))
-    )]
+    [
+      LoadOp('employees'),
+      GroupByOp(
+        ProjectionOp(RenameOp('total', Function('count')))
+      )
+    ]
   )
 
 def test_limit():
@@ -203,6 +227,7 @@ def test_limit():
   assert_equal(
     qb.query.operations,
     [
+      LoadOp('employees'),
       SliceOp(None,1)
     ]
   )
@@ -218,6 +243,7 @@ def test_offset():
   assert_equal(
     qb.query.operations,
     [
+      LoadOp('employees'),
       SliceOp(1,None)
     ]
   )
@@ -233,6 +259,36 @@ def test_offset_and_limit():
   assert_equal(
     qb.query.operations,
     [
+      LoadOp('employees'),
       SliceOp(1,2)
     ]
   )
+
+
+def test_join():
+
+  dataset = mock_data_set()
+
+  query = QueryBuilder(dataset).select(
+    'employee.*, manager.full_name as manager'
+  ).frm(
+    'employees as employee'
+  ).join(
+    'employees as manager', 
+    on="manager.id = employee.manager_id"
+  ).query
+
+  
+  operations = [
+    JoinOp(
+      AliasOp('manager',LoadOp('employees')),
+      AliasOp('employee',LoadOp('employees')),      
+      EqOp(Var('manager.employee_id'), Var('employee.manager_id'))  
+    ),
+    ProjectionOp(
+      SelectAllExpr('employee'),
+      RenameOp('manager', Var('manager.full_name'))
+    )
+  ]
+
+  eq_(query.operations,operations)

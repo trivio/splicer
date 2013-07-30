@@ -12,7 +12,7 @@ class QueryBuilder(object):
   __slots__ = {
     'dataset': '-> DataSet',
     'column_exps': 'str -- uparsed column',
-    'relation_name': '-> str -- the root relation',
+    'load': '-> nullary op',
     'ordering': '-> [Field] -- results ',
     'grouping': '-> [Field]',
     'qualifiers': '-> str',
@@ -35,7 +35,7 @@ class QueryBuilder(object):
   def __init__(self, dataset):
     self.dataset = dataset
     self.column_exps = "*"
-    self.relation_name = None
+    self.load = None
     self.qualifiers = ()
     self.ordering = None
     self.grouping = []
@@ -52,11 +52,20 @@ class QueryBuilder(object):
   def select(self, column_exps):
     return self.new(column_exps=column_exps)
 
-  def frm(self, relation_name):
-    if not self.dataset.has(relation_name):
-      raise ValueError, "No such relation {0}".format(relation_name)
+  def frm(self, clause):
+    return self.new(load = query_parser.parse_from(clause))
 
-    return self.new(relation_name=relation_name)
+  def join(self, clause, on=None):
+    if not self.load:
+      raise ValueError('Specify at least one relation with frm(...) before using join')
+
+
+    load = query_parser.parse_join(clause, self.load)
+    if on:
+      load.bool_op = query_parser.parse(on)
+
+    return self.new(load = load )
+
 
   def where(self, qualifiers):
     return self.new(qualifiers=self.qualifiers + (qualifiers,))
@@ -82,10 +91,10 @@ class QueryBuilder(object):
     Returns a valid query suitable for execution, or raises an exception.
     """
 
-    if not self.relation_name:
+    if not self.load:
       raise ValueError('Need to specify at least one relation')
 
-    operations = []
+    operations = [self.load]
 
     if self.qualifiers:
       qualifiers = iter(self.qualifiers)
@@ -97,8 +106,6 @@ class QueryBuilder(object):
 
 
     projection_op = query_parser.parse_select(self.column_exps)
-
-
 
 
     if self.grouping or self.has_aggregates(projection_op):
@@ -128,7 +135,7 @@ class QueryBuilder(object):
         stop = self.stop 
       operations.append(SliceOp(self.start, stop))
 
-    return Query(self.dataset, self.relation_name, operations)
+    return Query(self.dataset,  operations)
 
 
   def has_aggregates(self, projection_op):

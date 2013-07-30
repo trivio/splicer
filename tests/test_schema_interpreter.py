@@ -3,7 +3,7 @@
 from nose.tools import *
 
 from splicer import schema_interpreter
-
+from splicer.ast import LoadOp
 from .fixtures import mock_data_set
 
 
@@ -15,7 +15,7 @@ def test_no_operations():
 
   dataset   = mock_data_set()
   employees = dataset.get_relation('employees')
-  schema    = schema_interpreter.interpret(dataset, employees, [])
+  schema    = schema_interpreter.interpret(dataset, [LoadOp('employees')])
 
   assert_sequence_equal(
     schema.fields,

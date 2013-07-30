@@ -7,7 +7,8 @@ from splicer.ast import (
   AddOp, SubOp, 
   And, Or,
 
-  ProjectionOp, SelectionOp, RenameOp, SelectAllExpr
+  ProjectionOp, SelectionOp, RenameOp, SelectAllExpr,
+  GroupByOp
 )
 
 def test_parse_int():
@@ -66,10 +67,10 @@ def test_parse_incomplete_variable_path():
 def test_parse_tuple():
   ast = query_parser.parse('(1,2, "a")')
   assert_is_instance(ast, Tuple)
-  eq_(len(ast.exps), 3)
-  assert_is_instance(ast.exps[0], NumberConst)
-  assert_is_instance(ast.exps[1], NumberConst)
-  assert_is_instance(ast.exps[2], StringConst)
+  eq_(len(ast.exprs), 3)
+  assert_is_instance(ast.exprs[0], NumberConst)
+  assert_is_instance(ast.exprs[1], NumberConst)
+  assert_is_instance(ast.exprs[2], StringConst)
 
 def test_parse_function_no_args():
   ast = query_parser.parse('foo()')
@@ -147,7 +148,12 @@ def test_parse_or():
   ast = query_parser.parse('x = 1 or z=2')
   assert_is_instance(ast, Or)
 
-
+def test_group_by_core_expr():
+  ast = query_parser.parse_group_by('x,y')
+  eq_(
+    ast,
+    [Var('x'), Var('y')]
+  )
 
 
 

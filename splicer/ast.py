@@ -105,15 +105,33 @@ class StringConst(Const):
   """A string"""
   __slots__ = ('const',)
 
+
+class BoolConst(Const):
+  """A boolean const"""
+  __slots__ = ()
+  def __init__(self):
+    pass
+
+class TrueConst(BoolConst):
+  """The constant True """
+  __slots__ = ()
+  const=True
+
+class FalseConst(BoolConst):
+  """The constant False """
+  __slots__ = ()
+  const=False
+
+
 class Var(Expr):
   __slots__ = ('path',)
   def __init__(self, path):
     self.path = path
 
 class Tuple(Expr):
-  __slots__ = ('exps',)
-  def __init__(self, *exps):
-    self.exps = exps
+  __slots__ = ('exprs',)
+  def __init__(self, *exprs):
+    self.exprs = exprs
 
 class Function(Expr):
   __slots__ = ('name', 'args')
@@ -182,8 +200,9 @@ class LoadOp(Expr):
 class AliasOp(Expr):
   """Rename the relation to the given name"""
   __slots__ = ('name',)
-  def __init__(self, name):
+  def __init__(self, name, relation=None):
     self.name = name
+    self.relation = relation
 
 
 class ProjectionOp(Expr):
@@ -196,10 +215,12 @@ class SelectionOp(Expr):
   def __init__(self, bool_op):
     self.bool_op = bool_op
 
-class NaturalJoinOp(Expr):
+class JoinOp(Expr):
   __slots__ = ('right',)
-  def __init__(self, right):
+  def __init__(self, right, left=None, bool_op = TrueConst()):
     self.right = right
+    self.left = left
+    self.bool_op = bool_op
 
 class EquiJoinOp(Expr):
   __slots__ = ('right', 'bool_op')
