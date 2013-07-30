@@ -40,12 +40,6 @@ def schema_from_projection_op(projection_op, dataset, schema):
   
   return Schema(fields)
 
-def schema_from_group_by_op(group_by_op, dataset, schema):
-  return schema_from_projection_op(
-    group_by_op.projection_op, 
-    dataset, 
-    schema
-  )
 
 def schema_from_alias_op(alias_op, dataset, schema):
   return schema.new(name=alias_op.name)
@@ -129,6 +123,6 @@ def field_from_rename_op(expr, dataset, schema):
 
 op_type_to_schemas = {
   ProjectionOp: schema_from_projection_op,
-  GroupByOp: schema_from_group_by_op,
+
   AliasOp: schema_from_alias_op
 }
