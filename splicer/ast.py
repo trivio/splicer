@@ -172,6 +172,20 @@ class RenameOp(Expr):
     self.name = name
     self.expr  = expr
 
+
+class LoadOp(Expr):
+  """Load a relation with the given name"""
+  __slots__ = ('name',)
+  def __init__(self, name):
+    self.name = name
+
+class AliasOp(Expr):
+  """Rename the relation to the given name"""
+  __slots__ = ('name',)
+  def __init__(self, name):
+    self.name = name
+
+
 class ProjectionOp(Expr):
   __slots__ = ('exprs',)
   def __init__(self, *exprs):
@@ -180,6 +194,17 @@ class ProjectionOp(Expr):
 class SelectionOp(Expr):
   __slots__ = ('bool_op',)
   def __init__(self, bool_op):
+    self.bool_op = bool_op
+
+class NaturalJoinOp(Expr):
+  __slots__ = ('right',)
+  def __init__(self, right):
+    self.right = right
+
+class EquiJoinOp(Expr):
+  __slots__ = ('right', 'bool_op')
+  def __init__(self, right, bool_op):
+    self.right = right
     self.bool_op = bool_op
 
 class OrderByOp(Expr):

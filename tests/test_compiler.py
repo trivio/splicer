@@ -277,3 +277,65 @@ def test_offset_and_limit():
     ]
   )
 
+
+def test_self_join():
+  dataset = DataSet()
+  dataset.add_server(EmployeeServer())
+
+  manager = Query(dataset, 'employees', [AliasOp('manager')])
+
+  q = Query(
+    dataset, 
+    'employees', 
+    [
+      AliasOp('employee'),
+      EquiJoinOp(
+        manager,       
+        EqOp(Var('manager.employee_id'), Var('employee.manager_id'))  
+      )
+    ]
+  )
+  evaluate = compile(q)
+
+
+
+  assert_sequence_equal(
+    list(evaluate(dict(dataset=dataset))),
+    [
+      (4567, 'Sally Sanders', date(2010, 2, 24), 1234, 1234, 'Tom Tompson', date(2009, 1, 17), None),
+      (8901, 'Mark Markty', date(2010, 3, 1), 1234, 1234, 'Tom Tompson', date(2009, 1, 17), None)
+    ]
+  )
+
+def test_self_join_with_projection():
+  dataset = DataSet()
+  dataset.add_server(EmployeeServer())
+
+  manager = Query(dataset, 'employees', [AliasOp('manager')])
+
+  q = Query(
+    dataset, 
+    'employees', 
+    [
+      AliasOp('employee'),
+      EquiJoinOp(
+        manager,       
+        EqOp(Var('manager.employee_id'), Var('employee.manager_id'))  
+      ),
+      ProjectionOp(
+        SelectAllExpr('employee'),
+        RenameOp('manager', Var('manager.full_name'))
+      )
+    ]
+  )
+  evaluate = compile(q)
+
+
+
+  assert_sequence_equal(
+    list(evaluate(dict(dataset=dataset))),
+    [
+      (4567, 'Sally Sanders', date(2010, 2, 24), 1234, 'Tom Tompson'),
+      (8901, 'Mark Markty', date(2010, 3, 1), 1234,  'Tom Tompson')
+    ]
+  )

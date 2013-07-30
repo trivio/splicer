@@ -16,7 +16,7 @@ class Query(object):
 
 
   def __iter__(self):
-    return self.execute()
+    return iter(self.execute())
 
 
   @property

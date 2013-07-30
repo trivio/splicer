@@ -7,7 +7,7 @@ from .schema import Schema
 from .field import Field
 from .ast import (
   ProjectionOp, SelectionOp, GroupByOp, RenameOp, Var, Function, 
-  Const, UnaryOp, BinaryOp
+  Const, UnaryOp, BinaryOp, AliasOp, SelectAllExpr
 )
 
 def interpret(dataset, schema, operations):
@@ -31,10 +31,13 @@ def schema_from_projection_op(projection_op, dataset, schema):
   Given a projection_op, datset and existing schema, return the new
   schema.
   """
-  fields = []
-  for expr in projection_op.exprs:
-    fields.append(field_from_expr(expr, dataset, schema))
+  fields = [
+    field
+    for expr in projection_op.exprs
+    for field in fields_from_expr(expr,dataset,schema)
+  ]
 
+  
   return Schema(fields)
 
 def schema_from_group_by_op(group_by_op, dataset, schema):
@@ -43,6 +46,16 @@ def schema_from_group_by_op(group_by_op, dataset, schema):
     dataset, 
     schema
   )
+
+def schema_from_alias_op(alias_op, dataset, schema):
+  return schema.new(name=alias_op.name)
+
+def fields_from_expr(expr, dataset, schema):
+  if isinstance(expr, SelectAllExpr):
+    for field in fields_from_select_all(expr, dataset, schema):
+      yield field
+  else:
+    yield field_from_expr(expr, dataset, schema)
 
 def field_from_expr(expr, dataset, schema):
   """
@@ -74,6 +87,23 @@ def field_from_expr(expr, dataset, schema):
       ))
 
 
+def fields_from_select_all(expr, dataset, schema):
+  if expr.table is None:
+    fields = schema.fields
+  else:
+    prefix = expr.table + "."
+    fields = [
+      f
+      for f in schema.fields
+      if f.name.startswith(prefix)
+    ]
+
+  return [
+    field_from_var(Var(f.name), schema) for f in fields
+  ]
+
+
+
 def field_from_var(var_expr, schema):
   return schema[var_expr.path]
 
@@ -92,11 +122,13 @@ def field_from_function(function_expr, dataset, schema):
     raise ValueError("Can not determine return type of Function {}".format(name))
 
 
+
 def field_from_rename_op(expr, dataset, schema):
   field = field_from_expr(expr.expr, dataset, schema)
   return field.new(name=expr.name)
 
 op_type_to_schemas = {
   ProjectionOp: schema_from_projection_op,
-  GroupByOp: schema_from_group_by_op
+  GroupByOp: schema_from_group_by_op,
+  AliasOp: schema_from_alias_op
 }

@@ -5,17 +5,26 @@ from itertools import islice
 from ..ast import *
 from ..aggregate import Aggregate
 from ..relation import Relation
+from ..schema import JoinSchema
 from ..schema_interpreter import field_from_expr, schema_from_projection_op
 
 def compile(query):
+
+
   plan = query.operations
   operations = tuple(
     relational_op(op, query.dataset)
     for op in plan
   )
 
+  if isinstance(query.relation_name, basestring):
+    load = load_op(LoadOp(query.relation_name), query.dataset)
+  else:
+    load = query.relation_name
+
   def evaluate(ctx, *params):
-    relation = ctx['dataset'].get_relation(query.relation_name)
+
+    relation = load()
 
     for op in operations:
       relation = op(relation, ctx)
@@ -23,19 +32,38 @@ def compile(query):
 
   return evaluate
 
+def load_op(operation, dataset):
+  def load():
+    return dataset.get_relation(operation.name)
+  return load
 
+def alias_op(operation, dataset):
+  def alias(relation,ctx):
+    return Relation(
+      relation.schema.new(name=operation.name),
+      iter(relation)
+    )
+  return alias
 
 def relational_op(operation, dataset):
   return RELATION_OPS[type(operation)](operation, dataset)
 
 
+
+
 def projection_op(operation, dataset):
 
   def projection(relation, ctx):
-    columns = tuple(
-      value_expr(expr, relation, dataset)
-      for expr in operation.exprs
-    )
+    
+    columns = tuple([
+      column
+      for group in [
+        column_expr(expr, relation, dataset)
+        for expr in operation.exprs
+      ]
+      for column in group
+    ])
+
     schema = schema_from_projection_op(operation, dataset, relation.schema)
     return Relation(
       schema,
@@ -65,6 +93,48 @@ def selection_op(operation, dataset):
       )
     )
   return selection
+
+def join_op(operation, dataset):
+  right = operation.right
+
+
+  def join(relation, ctx):
+
+    schema = JoinSchema(
+      relation.schema,
+      right.schema
+    )
+
+    # seems silly to have to build a fake relation
+    # just so var_expr (which is reached by value_expr)
+    # can use the new schema. value_expr should just
+    # take the schema as an arg...
+    bogus = Relation(schema, None)
+
+    comparison = value_expr(operation.bool_op, bogus, dataset)
+
+    return Relation(
+      schema,
+      (
+        row
+        for row in ( 
+          left_row + right_row 
+          for left_row in relation
+          for right_row in iter(right)
+        ) if comparison(row,ctx)
+      )
+    )
+
+
+    #for l_r in relation:
+    #  for r_s in iter(right):
+    #    row = l_r + r_s
+    #    if comparison(row, ctx):
+    #      yield row
+
+  return join
+
+
 
 def order_by_op(operation, dataset):
 
@@ -216,6 +286,31 @@ def aggregates(exprs, dataset):
   )
 
 
+def column_expr(expr, relation, dataset):
+  # selectall returns a group of expresions, group solo to be flattened
+  # by the outer loop
+
+  if isinstance(expr, SelectAllExpr):
+    return select_all_expr(expr, relation, dataset)
+  else: 
+    return (value_expr(expr,relation,dataset),)
+
+def select_all_expr(expr, relation, dataset):
+  schema = relation.schema
+  if expr.table is None:
+    fields = schema.fields
+  else:
+    prefix = expr.table + "."
+    fields = [
+      f
+      for f in schema.fields
+      if f.name.startswith(prefix)
+    ]
+
+  return [
+    var_expr(Var(f.name), relation, dataset) for f in fields
+  ]
+
 def value_expr(expr, relation, dataset):
   return VALUE_EXPR[type(expr)](expr, relation, dataset)
 
@@ -335,10 +430,13 @@ VALUE_EXPR = {
 }
 
 RELATION_OPS = {
+  AliasOp: alias_op,
+  LoadOp: load_op,
   ProjectionOp: projection_op,
   SelectionOp: selection_op,
   OrderByOp: order_by_op,
   GroupByOp: group_by_op,
-  SliceOp: slice_op
+  SliceOp: slice_op,
+  EquiJoinOp: join_op
   
 }
