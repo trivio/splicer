@@ -2,8 +2,6 @@ import os
 from os.path import join, getsize
 import re
 
-
-
 from splicer import Schema, Field
 from splicer.path import pattern_regex
 
@@ -13,7 +11,6 @@ class FileServer(object):
      self._relations = {
       name:FileTable(name, **args) for name,args in relations.items()
     }
-
 
   @property
   def relations(self):
@@ -26,13 +23,14 @@ class FileServer(object):
     return self._relations.get(name)
 
 class FileTable(object):
-  def __init__(self,  name, root_dir, pattern=None, content_column=None, filename_column=None):
+  def __init__(self,  name, root_dir, **options):
     self.name = name
 
     if not root_dir.endswith('/'):
       root_dir += '/'
     self.root_dir = root_dir
 
+    pattern = options.get('pattern')
     if pattern:
       while pattern.startswith('/'):
         pattern = pattern[1:]
@@ -47,18 +45,23 @@ class FileTable(object):
       Field(name=name, type="STRING") for name in columns
     ]
 
-    self.content_column = content_column
-    if content_column:
-      fields.append(Field(name=content_column, type='BINARY'))
+    self.content_column = options.get('content_column')
+    if self.content_column:
+      fields.append(Field(name=self.content_column, type='BINARY'))
 
-    self.filename_column = filename_column
-    if filename_column:
-      fields.append(Field(name=filename_column, type='STRING'))
+    self.filename_column = options.get('filename_column')
+    if self.filename_column:
+      fields.append(Field(name=self.filename_column, type='STRING'))
 
     self.schema = Schema(fields)
 
   
   def extract_function(self):
+    """
+    Returns a function that will extract the data from a
+    file path.
+    """
+
     funcs = []
     if self.pattern_regex:
       def pattern_extractor(path):
@@ -91,8 +94,7 @@ class FileTable(object):
     else:
       return lambda path: tuple()
 
-
-   
+  
   def __iter__(self):
     extract = self.extract_function()
 

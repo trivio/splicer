@@ -13,6 +13,7 @@ class DataSet(object):
     self.schema_cache = {}
     self.executor = None
     self.compile = local.compile
+    self.dump_func = None
     self.udfs = {}
 
     self.aggregates = {
@@ -123,6 +124,11 @@ class DataSet(object):
   def set_compiler(self, compile_fun):
     self.compile = compile_fun
 
+  def set_dump_func(self, dump_func):
+    self.dump_func = dump_func
+
+  def dump(self, relation):
+    self.dump_func(relation)
 
   def execute(self, query, *params):
 

@@ -21,6 +21,9 @@ class Query(object):
   def schema(self):
     return interpret_schema(self.dataset,  self.operations)
     
+  def dump(self):
+    self.dataset.dump(self.execute())
+
   def execute(self, *params):
     return self.dataset.execute(self, *params)
 

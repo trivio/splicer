@@ -146,6 +146,8 @@ class QueryBuilder(object):
     else:
       return False
 
-
+  def dump(self):
+    self.query.dump()
+    
   def execute(self):
     return self.query.execute()
