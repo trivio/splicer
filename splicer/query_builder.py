@@ -42,6 +42,9 @@ class QueryBuilder(object):
     self.start = None
     self.stop = None
 
+  def __repr__(self):
+    return repr(self.schema)
+
   def __iter__(self):
     return iter(self.execute())
 
@@ -56,6 +59,7 @@ class QueryBuilder(object):
     return self.new(load = query_parser.parse_from(clause))
 
   def join(self, clause, on=None):
+    import pdb; pdb.set_trace()
     if not self.load:
       raise ValueError('Specify at least one relation with frm(...) before using join')
 
@@ -146,8 +150,12 @@ class QueryBuilder(object):
     else:
       return False
 
+  @property
+  def operations(self):
+    return self.query.operations
+
   def dump(self):
     self.query.dump()
-    
+
   def execute(self):
     return self.query.execute()

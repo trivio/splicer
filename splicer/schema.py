@@ -22,6 +22,16 @@ class Schema(ImmutableMixin):
     self._field_pos = { f.name:i for i,f in enumerate(self.fields) }
 
 
+  def __repr__(self):
+    name = self.name or "(no name)"
+    return "Relation " + name + ":\n" + "\n".join([ 
+      ("  {name}:[{type}]" if f.mode == 'REPEATED' else "  {name}:{type}").format(
+        name = f.name,
+        type = f.type
+      )
+
+       for f in self.fields
+    ])
 
   def __eq__(self, other):
     """Two schemas equal if their fields equal"""
