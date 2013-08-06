@@ -191,57 +191,60 @@ class RenameOp(Expr):
     self.expr  = expr
 
 
-class LoadOp(Expr):
+
+class RelationalOp(Expr):
+  pass
+
+class LoadOp(RelationalOp):
   """Load a relation with the given name"""
   __slots__ = ('name',)
   def __init__(self, name):
     self.name = name
 
-class AliasOp(Expr):
+class AliasOp(RelationalOp):
   """Rename the relation to the given name"""
-  __slots__ = ('name',)
-  def __init__(self, name, relation=None):
+  __slots__ = ('relation', 'name')
+  def __init__(self, name, relation):
     self.name = name
     self.relation = relation
 
 
-class ProjectionOp(Expr):
-  __slots__ = ('exprs',)
-  def __init__(self, *exprs):
+class ProjectionOp(RelationalOp):
+  __slots__ = ('relation', 'exprs')
+  def __init__(self, relation, *exprs):
+    self.relation = relation
     self.exprs = exprs
 
-class SelectionOp(Expr):
-  __slots__ = ('bool_op',)
-  def __init__(self, bool_op):
+class SelectionOp(RelationalOp):
+  __slots__ = ('relation','bool_op',)
+  def __init__(self, relation, bool_op):
+    self.relation = relation
     self.bool_op = bool_op
 
-class JoinOp(Expr):
-  __slots__ = ('right',)
-  def __init__(self, right, left=None, bool_op = TrueConst()):
-    self.right = right
+class JoinOp(RelationalOp):
+  __slots__ = ('left','right', 'bool_op')
+  def __init__(self,  left, right, bool_op = TrueConst()):
     self.left = left
-    self.bool_op = bool_op
-
-class EquiJoinOp(Expr):
-  __slots__ = ('right', 'bool_op')
-  def __init__(self, right, bool_op):
     self.right = right
     self.bool_op = bool_op
 
-class OrderByOp(Expr):
-  __slots__ = ('exprs',)
-  def __init__(self, first, *exprs):
+
+class OrderByOp(RelationalOp):
+  __slots__ = ('relation', 'exprs')
+  def __init__(self, relation, first, *exprs):
+    self.relation = relation
     self.exprs = (first,) + exprs
 
-class GroupByOp(Expr):
-  __slots__ = ('exprs','projection_op')
-  def __init__(self, projection_op, *exprs):
-    self.projection_op = projection_op
+class GroupByOp(RelationalOp):
+  __slots__ = ('exprs','relation')
+  def __init__(self, relation, *exprs):
+    self.relation = relation
     self.exprs =  exprs
 
-class SliceOp(Expr):
-  __slots__ = ('start','stop')
-  def __init__(self, *args):
+class SliceOp(RelationalOp):
+  __slots__ = ('relation','start','stop')
+  def __init__(self, relation, *args):
+    self.relation = relation
     if len(args) == 1:
       self.start = 0
       self.stop = args[0]

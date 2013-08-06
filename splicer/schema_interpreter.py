@@ -3,10 +3,13 @@
 Module used to interpret the AST into a schema based on a given relation.
 """
 
-from .schema import Schema
+from .schema import Schema,JoinSchema
+
 from .field import Field
 from .ast import (
-  ProjectionOp, SelectionOp, GroupByOp, RenameOp, Var, Function, 
+  ProjectionOp, SelectionOp, GroupByOp, RenameOp, LoadOp,
+  JoinOp,
+  Var, Function, 
   Const, UnaryOp, BinaryOp, AliasOp, SelectAllExpr
 )
 
@@ -15,27 +18,30 @@ def interpret(dataset, operations):
   Returns the schema that will be produced if the given
   operations are applied to the starting schema.
   """
-  load, operations = operations[0], operations[1:]
-  schema = schema_from_load(load, dataset)
+  
+  op_type = type(operations)
+  dispatch = op_type_to_schemas.get(
+    op_type,
+    schema_from_relation
+  ) 
 
-  for operation in operations:
-    op_type = type(operation)
-    dispatch = op_type_to_schemas.get(
-      op_type, 
-      lambda operation, dataset, schema: schema
-    )
-    schema = dispatch(operation, dataset, schema)
+  return dispatch(operations, dataset)
 
-  return schema
+
+def schema_from_relation(operation, dataset):
+  return interpret(dataset, operation.relation)
 
 def schema_from_load(operation, dataset):
   return dataset.get_relation(operation.name).schema
 
-def schema_from_projection_op(projection_op, dataset, schema):
+def schema_from_projection_op(projection_op, dataset):
   """
   Given a projection_op, datset and existing schema, return the new
   schema.
   """
+
+  schema = interpret(dataset, projection_op.relation)
+
   fields = [
     field
     for expr in projection_op.exprs
@@ -45,8 +51,16 @@ def schema_from_projection_op(projection_op, dataset, schema):
   
   return Schema(fields)
 
+def schema_from_join_op(join_op, dataset):
+  left = interpret(dataset, join_op.left)
+  right = interpret(dataset, join_op.right)
 
-def schema_from_alias_op(alias_op, dataset, schema):
+  return JoinSchema(left,right)
+
+
+
+def schema_from_alias_op(alias_op, dataset):
+  schema = interpret(dataset, alias_op.relation)
   return schema.new(name=alias_op.name)
 
 def fields_from_expr(expr, dataset, schema):
@@ -127,7 +141,8 @@ def field_from_rename_op(expr, dataset, schema):
   return field.new(name=expr.name)
 
 op_type_to_schemas = {
+  LoadOp: schema_from_load,
   ProjectionOp: schema_from_projection_op,
-
-  AliasOp: schema_from_alias_op
+  AliasOp: schema_from_alias_op,
+  JoinOp: schema_from_join_op
 }

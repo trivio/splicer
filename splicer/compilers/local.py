@@ -5,25 +5,16 @@ from itertools import islice
 from ..ast import *
 from ..aggregate import Aggregate
 from ..relation import Relation
-from ..schema import JoinSchema
-from ..schema_interpreter import field_from_expr, schema_from_projection_op
+from ..schema_interpreter import (
+  field_from_expr, schema_from_projection_op, schema_from_join_op
+)
 
 def compile(query):
 
-  plan = tuple(
-    relational_op(op, query.dataset)
-    for op in query.operations
-  )
+  plan = relational_op(query.operations, query.dataset)
 
   def evaluate(ctx, *params):
-
-    load, operations = plan[0], plan[1:]
- 
-    relation = load(ctx)
-
-    for op in operations:
-      relation = op(relation, ctx)
-    return relation
+    return plan(ctx)
 
   return evaluate
 
@@ -33,30 +24,25 @@ def load_op(operation, dataset):
   return load
 
 def alias_op(operation, dataset):
-  def alias(relation,ctx):
+  load = relational_op(operation.relation, dataset)
+
+  def alias(ctx):
+    relation = load(ctx)
     return Relation(
       relation.schema.new(name=operation.name),
       iter(relation)
     )
 
-  if operation.relation:
-
-    load = relational_op(operation.relation, dataset)
-
-    return lambda ctx: alias(load(ctx), ctx)
-  else:
-    return alias
+  return alias
 
 def relational_op(operation, dataset):
   return RELATION_OPS[type(operation)](operation, dataset)
 
-
-
-
 def projection_op(operation, dataset):
+  load = relational_op(operation.relation, dataset)
 
-  def projection(relation, ctx):
-    
+  def projection(ctx):
+    relation = load(ctx)
     columns = tuple([
       column
       for group in [
@@ -66,7 +52,7 @@ def projection_op(operation, dataset):
       for column in group
     ])
 
-    schema = schema_from_projection_op(operation, dataset, relation.schema)
+    schema = schema_from_projection_op(operation, dataset)
     return Relation(
       schema,
       (
@@ -80,11 +66,14 @@ def projection_op(operation, dataset):
 
 
 def selection_op(operation, dataset):
+  load = relational_op(operation.relation, dataset)
+
   if operation.bool_op is None:
     return lambda relation, ctx: relation
 
 
-  def selection(relation, ctx):
+  def selection(ctx):
+    relation = load(ctx)
     predicate  = value_expr(operation.bool_op, relation, dataset)
     return Relation(
       relation.schema,
@@ -98,15 +87,14 @@ def selection_op(operation, dataset):
 
 def join_op(operation, dataset):
   right_op = relational_op(operation.right, dataset)
+  left_op = relational_op(operation.left, dataset)
 
 
-  def join(relation, ctx):
+  def join(ctx):
     right = right_op(ctx)
+    relation = left_op(ctx)
 
-    schema = JoinSchema(
-      relation.schema,
-      right.schema
-    )
+    schema = schema_from_join_op(operation, dataset)
 
     # seems silly to have to build a fake relation
     # just so var_expr (which is reached by value_expr)
@@ -129,17 +117,15 @@ def join_op(operation, dataset):
     )
 
 
-  if operation.left:
-    load = relational_op(operation.left, dataset)
-    return lambda ctx: join(load(ctx), ctx)
-  else:
-    return join
+  return join
 
 
 
 def order_by_op(operation, dataset):
+  load = relational_op(operation.relation, dataset)
+  def order_by(ctx):
+    relation = load(ctx)
 
-  def order_by(relation, ctx):
     columns = tuple(
       value_expr(expr, relation, dataset)
       for expr in operation.exprs
@@ -155,12 +141,13 @@ def order_by_op(operation, dataset):
   return order_by
 
 def group_by_op(operation, dataset):
+  if operation.exprs:
+    load   = order_by_op(operation, dataset)
+  else:
+    load = relational_op(operation.relation, dataset)
 
-  order_by   = order_by_op(operation, dataset) 
-  projection = projection_op(operation.projection_op, dataset)
 
-
-  exprs      = operation.projection_op.exprs
+  exprs      = operation.relation.exprs
 
   aggs       = aggregates(exprs, dataset)
 
@@ -169,20 +156,18 @@ def group_by_op(operation, dataset):
   finalize   = finalize_op(aggs)
 
 
-  def group_by(relation, ctx):
+  def group_by(ctx):
+    ordered_relation = load(ctx)
     if operation.exprs:
-      ordered_relation = order_by(projection(relation, ctx), ctx)
       key = key_op(operation.exprs, ordered_relation.schema)
     else:
       # it's all aggregates with no group by elements
       # so no need to order the table
-      ordered_relation = projection(relation, ctx)
       key = lambda row,ctx: None
 
     schema = schema_from_projection_op(
       operation, 
-      dataset, 
-      ordered_relation.schema
+      dataset
     )
 
     def group():
@@ -212,8 +197,9 @@ def group_by_op(operation, dataset):
 
 
 def slice_op(expr, dataset):
-
-  def limit(relation, ctx):
+  load = relational_op(expr.relation, dataset)
+  def limit(ctx):
+    relation = load(ctx)
     return Relation(
       relation.schema,
       islice(relation, expr.start, expr.stop)
@@ -397,6 +383,10 @@ VALUE_EXPR = {
   Var: var_expr,
   StringConst: const_expr,
   NumberConst: const_expr,
+
+  TrueConst: const_expr,
+  FalseConst: const_expr,
+
   Function: function_expr,
 
   NegOp: partial(unary_op, operator.neg),

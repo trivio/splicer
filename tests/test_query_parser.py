@@ -4,7 +4,7 @@ from splicer import query_parser
 from splicer.ast import (
   NumberConst, StringConst, Var, Function, Tuple,
   NegOp, NotOp, MulOp, DivOp, ItemGetterOp, ParamGetterOp,
-  AddOp, SubOp, 
+  AddOp, SubOp, LoadOp,
   And, Or,
 
   ProjectionOp, SelectionOp, RenameOp, SelectAllExpr,
@@ -117,7 +117,8 @@ def test_parse_paramgetter():
   eq_(ast.expr, 0)
 
 def test_parse_select_core():
-  ast = query_parser.parse_select('x, x as x2, 49929')
+
+  ast = query_parser.parse_select(LoadOp('bogus'), 'x, x as x2, 49929')
   assert_is_instance(ast, ProjectionOp)
 
   assert_is_instance(ast.exprs[0], Var)
@@ -132,12 +133,12 @@ def test_parse_select_core():
   eq_(ast.exprs[2].const, 49929)
 
 def test_parse_select_all():
-  ast = query_parser.parse_select('*')
-  eq_(ast, ProjectionOp(SelectAllExpr()))
+  ast = query_parser.parse_select(LoadOp('bogus'), '*')
+  eq_(ast, LoadOp('bogus'))
 
 def test_parse_select_all_frm_table():
-  ast = query_parser.parse_select('table.*, x')
-  eq_(ast, ProjectionOp(SelectAllExpr('table'), Var('x')))
+  ast = query_parser.parse_select(LoadOp('table'), 'table.*, x')
+  eq_(ast, ProjectionOp(LoadOp('table'), SelectAllExpr('table'), Var('x')))
 
 
 def test_parse_and():

@@ -17,8 +17,9 @@ def parse(statement, root_exp = None):
     raise SyntaxError('Incomplete statement')
   return exp
 
-def parse_select(statement):
-  return parse(statement, root_exp=select_core_exp)
+def parse_select(relation, statement):
+  return parse(statement, root_exp=lambda tokens: select_core_exp(tokens, relation))
+
 
 def parse_from(statement):
   return parse(statement, root_exp=from_core_exp)
@@ -28,16 +29,20 @@ def parse_join(statement, left):
 
 
 def parse_order_by(statement):
-  return parse(statement, root_exp=order_by_core_expr)
+  return parse(
+    statement, 
+    root_exp=order_by_core_expr
+  )
 
 def parse_group_by(statement):
-  return parse(statement, root_exp=group_by_core_expr)
+  return parse(
+    statement, 
+    root_exp=group_by_core_expr
+  )
 
 
 ## parsing routines #######
 
-
-#SYMBOLS = '+-*/(),='
 
 
 def and_exp(tokens):    
@@ -176,7 +181,7 @@ def var_exp(name, tokens, allowed=string.letters + '_'):
 # sql specific parsing
 
 
-def select_core_exp(tokens):
+def select_core_exp(tokens, relation):
   columns = []
 
   while tokens:
@@ -186,7 +191,10 @@ def select_core_exp(tokens):
     if tokens and tokens[0] == ',':
       tokens.pop(0)
 
-  return ProjectionOp(*columns)
+  if len(columns) == 1 and isinstance(columns[0], SelectAllExpr) and columns[0].table is None:
+    return relation
+  else:
+    return ProjectionOp(relation, *columns)
 
 def from_core_exp(tokens):
   left = join_core_exp(tokens, None).right
@@ -209,8 +217,7 @@ def join_core_exp(tokens, left):
       alias = tokens.pop(0)
       load_op = AliasOp(alias, load_op)
 
-
-  return JoinOp(load_op, left)
+  return JoinOp(left, load_op)
 
 
 
@@ -261,7 +268,7 @@ def order_by_core_expr(tokens):
         raise SyntaxError()
 
 
-  return OrderByOp(*columns)
+  return columns
 
 def group_by_core_expr(tokens):
 
@@ -272,6 +279,4 @@ def group_by_core_expr(tokens):
     if tokens and tokens[0] == ',':
       tokens.pop(0)
 
-  # can't return GroupByOp because it needs a valid
-  # ProjectionOp build, so we let the parser consrtruct that
   return columns

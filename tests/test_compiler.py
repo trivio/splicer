@@ -14,7 +14,7 @@ def test_projection():
 
   q = Query(
     dataset,  
-    [ LoadOp('employees'), ProjectionOp(Var('full_name')) ]
+    ProjectionOp(LoadOp('employees'), Var('full_name'))
   )
   evaluate = compile(q)
 
@@ -29,12 +29,10 @@ def test_selection():
 
   q = Query(
     dataset,
-    [
+    SelectionOp(
       LoadOp('employees'), 
-      SelectionOp(
-        EqOp(Var('manager_id'), NullConst())
-      )
-    ]
+      EqOp(Var('manager_id'), NullConst())
+    )
   )
   
   evaluate = compile(q)
@@ -49,12 +47,10 @@ def test_selection():
 
   q = Query(
     dataset, 
-    [
+    SelectionOp(
       LoadOp('employees'),
-      SelectionOp(
-        NotOp(EqOp(Var('manager_id'), NullConst()))
-      )
-    ]
+      NotOp(EqOp(Var('manager_id'), NullConst()))
+    )
   )
   
   evaluate = compile(q)
@@ -74,7 +70,7 @@ def test_addition():
 
   q = Query(
     dataset, 
-    [LoadOp('employees'), ProjectionOp(AddOp(Var('employee_id'), NumberConst(1)))]
+    ProjectionOp(LoadOp('employees'), AddOp(Var('employee_id'), NumberConst(1)))
   )
   evaluate = compile(q)
 
@@ -90,7 +86,7 @@ def test_order_by():
 
   q = Query(
     dataset, 
-    [LoadOp('employees'), OrderByOp(Var('full_name'))]
+    OrderByOp(LoadOp('employees'), Var('full_name'))
   )
   evaluate = compile(q)
 
@@ -110,7 +106,7 @@ def test_order_by_asc():
 
   q = Query(
     dataset, 
-    [LoadOp('employees'), OrderByOp(Asc(Var('employee_id')))]
+    OrderByOp(LoadOp('employees'), Asc(Var('employee_id')))
   )
   evaluate = compile(q)
 
@@ -136,7 +132,7 @@ def test_function_calls():
 
   q = Query(
     dataset, 
-    [LoadOp('employees'), ProjectionOp(Function('initials', Var('full_name')))]
+    ProjectionOp(LoadOp('employees'), Function('initials', Var('full_name')))
   )
   evaluate = compile(q)
 
@@ -165,7 +161,7 @@ def test_decorator_function_calls():
 
   q = Query(
     dataset,  
-    [LoadOp('employees'), ProjectionOp(Function('initials', Var('full_name')))]
+    ProjectionOp(LoadOp('employees'), Function('initials', Var('full_name')))
   )
   evaluate = compile(q)
 
@@ -184,7 +180,7 @@ def test_aggregation_whole_table():
 
   q = Query(
     dataset,  
-    [LoadOp('employees'), GroupByOp(ProjectionOp(Function('count')))]
+    GroupByOp(ProjectionOp(LoadOp('employees'), Function('count')))
   )
   evaluate = compile(q)
 
@@ -202,13 +198,11 @@ def test_aggregation_on_column():
 
   q = Query(
     dataset, 
-    [
-      LoadOp('employees'),
-      GroupByOp(
-        ProjectionOp(Var('manager_id'), Function('count')), 
-        Var('manager_id')
-      )
-    ]
+    GroupByOp(
+
+      ProjectionOp(LoadOp('employees'), Var('manager_id'), Function('count')), 
+      Var('manager_id')
+    )
   )
   evaluate = compile(q)
 
@@ -226,7 +220,7 @@ def test_limit():
 
   q = Query(
     dataset, 
-    [LoadOp('employees'), SliceOp(1)]
+    SliceOp(LoadOp('employees'), 1)
   )
   evaluate = compile(q)
 
@@ -243,7 +237,7 @@ def test_offset():
 
   q = Query(
     dataset, 
-    [LoadOp('employees'), SliceOp(1,None)]
+    SliceOp(LoadOp('employees'), 1,None)
   )
   evaluate = compile(q)
 
@@ -262,7 +256,7 @@ def test_offset_and_limit():
 
   q = Query(
     dataset, 
-    [LoadOp('employees'), SliceOp(1,2)]
+    SliceOp(LoadOp('employees'), 1,2)
   )
   evaluate = compile(q)
 
@@ -274,6 +268,20 @@ def test_offset_and_limit():
   )
 
 
+def test_cross_join():
+  dataset = DataSet()
+  dataset.add_server(EmployeeServer())
+
+  q = Query(
+    dataset, 
+    JoinOp(LoadOp('employees'), LoadOp('employees'))
+  )
+  evaluate = compile(q)
+  eq_(
+    len(list(evaluate(dict(dataset=dataset)))),
+    9
+  )
+
 def test_self_join():
   dataset = DataSet()
   dataset.add_server(EmployeeServer())
@@ -281,13 +289,11 @@ def test_self_join():
 
   q = Query(
     dataset,  
-    [
-      JoinOp(
-        AliasOp('manager', LoadOp('employees')),
-        AliasOp('employee', LoadOp('employees')),
-        EqOp(Var('manager.employee_id'), Var('employee.manager_id'))
-      )
-    ]
+    JoinOp(
+      AliasOp('employee', LoadOp('employees')),
+      AliasOp('manager', LoadOp('employees')),
+      EqOp(Var('manager.employee_id'), Var('employee.manager_id'))
+    )
   )
   evaluate = compile(q)
 
@@ -307,17 +313,15 @@ def test_self_join_with_projection():
 
   q = Query(
     dataset,  
-    [
+    ProjectionOp(
       JoinOp(
         AliasOp('manager', LoadOp('employees')),
         AliasOp('employee', LoadOp('employees')),
         EqOp(Var('manager.employee_id'), Var('employee.manager_id'))
       ),
-      ProjectionOp(
-        SelectAllExpr('employee'),
-        RenameOp('manager', Var('manager.full_name'))
-      )
-    ]
+      SelectAllExpr('employee'),
+      RenameOp('manager', Var('manager.full_name'))
+    )
   )
 
   evaluate = compile(q)

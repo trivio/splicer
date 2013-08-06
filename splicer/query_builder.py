@@ -1,5 +1,9 @@
 from . import Query
-from .ast import SelectionOp, And, SelectAllExpr, GroupByOp, SliceOp
+from .ast import (
+  RelationalOp, ProjectionOp, SelectionOp, GroupByOp, OrderByOp, 
+  SliceOp, JoinOp,
+  And, SelectAllExpr
+)
 import query_parser
 
 from .compilers.local import is_aggregate
@@ -59,12 +63,14 @@ class QueryBuilder(object):
     return self.new(load = query_parser.parse_from(clause))
 
   def join(self, clause, on=None):
-    import pdb; pdb.set_trace()
     if not self.load:
       raise ValueError('Specify at least one relation with frm(...) before using join')
 
+    if isinstance(clause, QueryBuilder):
+      load = JoinOp(self.load, clause.operations)
+    else:
+      load = query_parser.parse_join(clause, self.load)
 
-    load = query_parser.parse_join(clause, self.load)
     if on:
       load.bool_op = query_parser.parse(on)
 
@@ -98,7 +104,7 @@ class QueryBuilder(object):
     if not self.load:
       raise ValueError('Need to specify at least one relation')
 
-    operations = [self.load]
+    operations = self.load
 
     if self.qualifiers:
       qualifiers = iter(self.qualifiers)
@@ -106,44 +112,37 @@ class QueryBuilder(object):
       for qualifier in qualifiers:
         bool_op = And(bool_op, query_parser.parse(qualifier))
 
-      operations.append(SelectionOp(bool_op))
+      operations = SelectionOp(operations, bool_op)
+      #operations.append(SelectionOp(bool_op))
 
 
-    projection_op = query_parser.parse_select(self.column_exps)
+    operations = query_parser.parse_select(operations, self.column_exps)
 
 
-    if self.grouping or self.has_aggregates(projection_op):
-      operations.append(GroupByOp(projection_op, *self.grouping))
-      if self.ordering:
-        # todo: eleminate ordering if it matches
-        # the grouping since we already sort
-        operations.append(self.ordering)
-    else:
-      if self.ordering:
-        operations.append(self.ordering)
-      # todo: this optimization that should be moved to 
-      # the query rewriting phase
-      is_select_star = (
-        len(projection_op.exprs) == 1
-        and isinstance(projection_op.exprs[0], SelectAllExpr)
-        and projection_op.exprs[0].table is None
-
-      )
-      if not is_select_star:
-        operations.append(projection_op)
+    if self.grouping or self.has_aggregates(operations):
+      operations = GroupByOp(operations, *self.grouping)
+    
+    if self.ordering:
+      # todo: eleminate ordering if it matches
+      # the grouping since we already sort
+      #operations.append(self.ordering)
+      operations = OrderByOp(operations, *self.ordering)
 
     if self.stop is not None or self.start is not None:
       if self.start and self.stop:
         stop = self.start + self.stop
       else:
         stop = self.stop 
-      operations.append(SliceOp(self.start, stop))
+      operations = SliceOp(operations, self.start, stop)
 
     return Query(self.dataset,  operations)
 
 
   def has_aggregates(self, projection_op):
     """Returns true if the projection has aggregates"""
+    if not isinstance(projection_op, ProjectionOp):
+      return False
+
     for expr in projection_op.exprs:
       if is_aggregate(expr, self.dataset):
         return True
