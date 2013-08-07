@@ -63,7 +63,12 @@ def comparison_exp(tokens):
   lhs = additive_exp(tokens)
 
   if len(tokens) and tokens[0] in COMPARISON_OPS:
-    Op = COMPARISON_OPS[tokens.pop(0)]
+    token = tokens.pop(0)
+    if tokens and tokens[0] == 'not':
+      token = 'is not'
+      tokens.pop(0)
+
+    Op = COMPARISON_OPS[token]
     rhs =  additive_exp(tokens)
     return Op(lhs, rhs)
   else:
@@ -130,7 +135,8 @@ def value_exp(tokens):
   if token.startswith('?'):
     pos = int(token[1:])
     return ParamGetterOp(pos)
-
+  elif token == 'null':
+    return NullConst()
   elif token[0] in string.digits:
     return NumberConst(int(token))
   elif token.startswith('"'):
@@ -168,7 +174,10 @@ def function_exp(name, tokens):
   args = tuple_exp(tokens)
   return Function(name, *args.exprs)
 
+reserved_words = ['is','in']
 def var_exp(name, tokens, allowed=string.letters + '_'):
+  if name in reserved_words:
+    raise SyntaxError('invalid syntax')
   path = [name]
 
   while len(tokens) >= 2 and tokens[0] == '.' and tokens[1][0] in allowed:

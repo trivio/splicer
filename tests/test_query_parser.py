@@ -2,8 +2,9 @@ from nose.tools import *
 from splicer import query_parser
 
 from splicer.ast import (
-  NumberConst, StringConst, Var, Function, Tuple,
+  NumberConst, StringConst, NullConst, Var, Function, Tuple,
   NegOp, NotOp, MulOp, DivOp, ItemGetterOp, ParamGetterOp,
+  IsOp, IsNotOp,
   AddOp, SubOp, LoadOp,
   And, Or,
 
@@ -100,6 +101,30 @@ def test_parse_function_with_multiple_args():
   eq_(ast.args[0].const, 1)
   eq_(ast.args[1].path, 'x')
   eq_(ast.args[2].const, 'hi')
+
+
+def test_parse_is():
+  ast = query_parser.parse('x is y')
+  eq_(
+    ast,
+    IsOp(Var('x'), Var('y'))
+  )
+
+  ast = query_parser.parse('x is not y')
+  eq_(
+    ast,
+    IsNotOp(Var('x'), Var('y'))
+  )
+
+def test_parse_invalid_is():
+  assert_raises(SyntaxError, query_parser.parse, 'is')
+
+def test_parse_is_null():
+  ast = query_parser.parse('x is null')
+  eq_(
+    ast,
+    IsOp(Var('x'), NullConst())
+  )
 
 
 def test_parse_itemgetter():

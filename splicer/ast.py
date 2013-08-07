@@ -70,6 +70,15 @@ class GtOp(BinaryOp):
   """Greater than"""
   __slots__ = ('lhs', 'rhs')
 
+class IsOp(BinaryOp):
+  """x is y"""
+  __slots__ = ('lhs', 'rhs')
+
+class IsNotOp(BinaryOp):
+  """x is not y"""
+  __slots__ = ('lhs', 'rhs')
+
+
 class AddOp(BinaryOp):
   """lhs + rhs"""
   __slots__ = ('lhs', 'rhs')
@@ -90,6 +99,7 @@ class DivOp(BinaryOp):
 class NullConst(Expr):
   """Null or None"""
   __slots__ = ()
+  const = None
 
 class Const(Expr):
   __slots__ = ('const',)
@@ -148,6 +158,8 @@ COMPARISON_OPS = {
   '!=' : NeOp,
   '>=' : GeOp,
   '>'  : GtOp,
+  'is' : IsOp,
+  'is not' : IsNotOp
 }
 
 

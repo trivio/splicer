@@ -384,6 +384,7 @@ VALUE_EXPR = {
   StringConst: const_expr,
   NumberConst: const_expr,
 
+  NullConst: const_expr,
   TrueConst: const_expr,
   FalseConst: const_expr,
 
@@ -401,6 +402,8 @@ VALUE_EXPR = {
   NeOp: partial(binary_op, operator.ne),
   GeOp: partial(binary_op, operator.ge),
   GtOp: partial(binary_op, operator.gt),
+  IsOp: partial(binary_op, operator.is_),
+  IsNotOp: partial(binary_op, operator.is_not),
 
   AddOp: partial(binary_op, operator.add),
   SubOp: partial(binary_op, operator.sub),
