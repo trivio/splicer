@@ -20,10 +20,14 @@ class Query(object):
   @property
   def schema(self):
     return interpret_schema(self.dataset,  self.operations)
+
     
   def dump(self):
     self.dataset.dump(self.execute())
 
+  def create_view(self, name):
+    self.dataset.create_view(name, self.operations)
+    
   def execute(self, *params):
     return self.dataset.execute(self, *params)
 

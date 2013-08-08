@@ -1,4 +1,6 @@
-class Expr(object):
+from .immutable import ImmutableMixin
+
+class Expr(ImmutableMixin):
   def __eq__(self, other):
 
     result = (
@@ -247,6 +249,17 @@ class OrderByOp(RelationalOp):
     self.relation = relation
     self.exprs = (first,) + exprs
 
+  def new(self, **parts):
+    # OrderByOp's __init__ doesn't match what's defined in __slots__
+    # so we have to help it make a copy of this object
+    exprs = parts.get('exprs', self.exprs)
+    first = exprs[0]
+    tail = exprs[1:]
+    relation = parts.get('relation', self.relation)
+
+    return self.__class__(relation, first, *tail)
+
+
 class GroupByOp(RelationalOp):
   __slots__ = ('exprs','relation')
   def __init__(self, relation, *exprs):
@@ -262,4 +275,13 @@ class SliceOp(RelationalOp):
       self.stop = args[0]
     else:
       self.start, self.stop = args
+
+  def new(self, **parts):
+    # slice op's __init__ doesn't match what's defined in __slots__
+    # so we have to help it make a copy of this object
+    args = parts.get('start', self.start), parts.get('stop', self.stop)
+    relation = parts.get('relation', self.relation)
+
+    return self.__class__(relation, *args)
+
     

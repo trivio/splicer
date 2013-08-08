@@ -1,3 +1,5 @@
+import inspect
+
 class ImmutableMixin(object):
   """
   Mixin used to provide immutable object support (kind of).
@@ -26,4 +28,11 @@ class ImmutableMixin(object):
     attrs = {attr:getattr(self, attr) for attr in self.__slots__}
     attrs.update(parts)
 
-    return self.__class__(**attrs)
+    arg_spec = inspect.getargspec(self.__class__.__init__)
+    args = []
+    for arg in arg_spec.args[1:]:
+      args.append(attrs.pop(arg))
+
+    args.extend(attrs.pop(arg_spec.varargs, ()))
+
+    return self.__class__(*args, **attrs)

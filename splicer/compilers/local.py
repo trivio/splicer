@@ -5,18 +5,25 @@ from itertools import islice
 from ..ast import *
 from ..aggregate import Aggregate
 from ..relation import Relation
+from ..operations import replace_views
 from ..schema_interpreter import (
   field_from_expr, schema_from_projection_op, schema_from_join_op
 )
 
+from .join import nested_block_join
+
 def compile(query):
 
-  plan = relational_op(query.operations, query.dataset)
+  operations = replace_views(query.operations, query.dataset)
+
+  plan = relational_op(operations, query.dataset)
 
   def evaluate(ctx, *params):
     return plan(ctx)
 
   return evaluate
+
+
 
 def load_op(operation, dataset):
   def load(ctx):
@@ -91,8 +98,9 @@ def join_op(operation, dataset):
 
 
   def join(ctx):
+    left = left_op(ctx)
     right = right_op(ctx)
-    relation = left_op(ctx)
+
 
     schema = schema_from_join_op(operation, dataset)
 
@@ -106,14 +114,7 @@ def join_op(operation, dataset):
 
     return Relation(
       schema,
-      (
-        row
-        for row in ( 
-          left_row + right_row 
-          for left_row in relation
-          for right_row in right_op(ctx)
-        ) if comparison(row,ctx)
-      )
+      nested_block_join(left, right, comparison, ctx)
     )
 
 

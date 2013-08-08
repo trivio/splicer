@@ -60,7 +60,12 @@ class QueryBuilder(object):
     return self.new(column_exps=column_exps)
 
   def frm(self, clause):
-    return self.new(load = query_parser.parse_from(clause))
+    relation = query_parser.parse_from(clause)
+    #view = self.dataset.views.get(relation.name)
+    #if view:
+    #  return self.new(load=view)
+    #else:
+    return self.new(load = relation)
 
   def join(self, clause, on=None):
     if not self.load:
@@ -158,3 +163,7 @@ class QueryBuilder(object):
 
   def execute(self):
     return self.query.execute()
+
+  def create_view(self, name):
+    self.query.create_view(name)
+    return self

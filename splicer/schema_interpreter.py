@@ -3,6 +3,7 @@
 Module used to interpret the AST into a schema based on a given relation.
 """
 
+from .operations import replace_views
 from .schema import Schema,JoinSchema
 
 from .field import Field
@@ -18,7 +19,11 @@ def interpret(dataset, operations):
   Returns the schema that will be produced if the given
   operations are applied to the starting schema.
   """
-  
+
+  # todo, consider pushing this up into the dataset
+  # object as it maybe duplicated in the complie step
+  # as well
+  operations = replace_views(operations, dataset)
   op_type = type(operations)
   dispatch = op_type_to_schemas.get(
     op_type,

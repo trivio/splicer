@@ -10,6 +10,7 @@ class DataSet(object):
   def __init__(self):
     self.servers = []
     self.relation_cache = {}
+    self.views = {}
     self.schema_cache = {}
     self.executor = None
     self.compile = local.compile
@@ -38,6 +39,14 @@ class DataSet(object):
     if server not in self.servers:
       self.servers.append(server)
 
+  def create_view(self, name, query_or_operations):
+    if isinstance(query_or_operations, basestring):
+      operations = self.query(query_or_operations).operations
+    else:
+      operations = query_or_operations
+
+    self.views[name] = operations
+    
 
   def function(self, returns=None, name=None):
     """Decorator for registering functions
@@ -72,6 +81,9 @@ class DataSet(object):
       return function
     else:
       raise NameError("No function named {}".format(name))
+
+  def get_view(self, name):
+    return self.views.get(name)
 
   @property
   def relations(self):
@@ -139,6 +151,16 @@ class DataSet(object):
     }
 
     return callable(ctx)
+
+  def relpace_view(self, op):
+    """
+    Given an operation tree return a new operation tree with 
+    LoadOps that reference views replaced with the operations 
+    of the view.
+    """
+
+
+
 
   def query(self, statement):
     """Parses the statement and returns a Query"""

@@ -312,3 +312,4 @@ def test_join_subselect():
     operations
 
   )
+
