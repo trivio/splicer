@@ -1,5 +1,5 @@
 # functions for manipulating operations go here
-from ast import LoadOp, JoinOp
+from ast import LoadOp, JoinOp, EqOp, Var
 
 def replace_views(operations, dataset):
   def view_replacer(node):

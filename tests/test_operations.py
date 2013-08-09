@@ -1,7 +1,7 @@
 # test_operations.py
 from nose.tools import *
 
-from splicer import DataSet
+from splicer import DataSet, Relation, Schema
 from splicer.operations import walk, replace_views
 from splicer.ast import *
 
@@ -50,3 +50,4 @@ def test_relpace_views():
     )
 
   )
+

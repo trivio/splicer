@@ -1,8 +1,14 @@
+from collections import defaultdict
+from functools import partial
 from sys import getsizeof
+
+from ..ast import EqOp, And, Var
+from .local import var_expr
 
 B=1
 K=1024
 M=K**2
+MAX_SIZE=10*M
 
 def record_size(record):
   # size of outer tuple
@@ -30,14 +36,114 @@ def buffered(relation, max_size):
     yield block
 
 
-def nested_block_join(r,s, comparison, ctx):
-  buffer_size = ctx.get('sort_buffer_size', 10*M) / 2
 
+
+def nested_block_join(r_op,s_op, comparison, ctx):
+  buffer_size = ctx.get('sort_buffer_size', MAX_SIZE) / 2
+  r = r_op(ctx)
 
   for r_block in buffered(r, buffer_size):
+    s = s_op(ctx)
     for s_block in buffered(s, buffer_size):
       for s_row in s_block:
         for r_row in r_block:
           row = r_row + s_row
           if comparison(row, ctx):
             yield row
+
+def hash_join(r_op,s_op, comparison, ctx):
+  r = r_op(ctx)
+  buffer_size = ctx.get('sort_buffer_size', MAX_SIZE) / 2
+
+  left_key, right_key = comparison
+
+  for r_block in buffered(r, buffer_size):
+    probe = defaultdict(list)
+    for row in r_block:
+      probe[left_key(row,ctx)].append(row)
+
+    for s_block in buffered(s_op(ctx), buffer_size):
+      for s_row in s_block:
+        for match in probe.get(right_key(s_row,ctx), ()):
+          yield match + s_row
+
+def join_keys(left, right, op):
+  """
+  Given two relations that need to be joined and
+  a expression, returns two functions for extracting
+  keys suitable for equi joins from the relations
+
+
+  """
+
+  def key_func(funcs, row, ctx):
+    return tuple(
+      f(row, ctx)
+      for f in funcs
+    )
+
+  l_key, r_key =  zip(*join_keys_expr(left,right,op))
+
+  return partial(key_func, l_key), partial(key_func, r_key) 
+
+    
+
+def join_keys_expr(left, right, op):
+  """
+  Rerturn the function for extracting the key values from the expresion
+  or  (None,None) if the operation is not an EqOp with two vars.
+
+  All of thes following expresions
+
+  left.x = right.y
+  right.y = left.x
+  x = y
+  y = x
+  left.x = y
+  y = left.x
+  right.y = x
+  x = right.y
+
+  Are equivalent and should return a list of two functions
+  the first function will extract x from a row in the left relation
+  and extract y from a row in the right relation.
+  """
+
+  if isinstance(op, And):
+    return (
+      join_keys_expr(left, right, op.lhs) 
+      + join_keys_expr(left, right, op.rhs) 
+    )
+
+  if not isinstance(op, EqOp):
+    raise ValueError("Expression is not equijoinable")
+
+  if not (isinstance(op.lhs, Var) and isinstance(op.rhs, Var)):
+    # the query rewritter should push expresions that don't
+    # involve both sides of the relation down the tree
+    raise ValueError("Expression is not equijoinable")
+
+
+  cols = [None, None]
+  for var in (op.lhs, op.rhs):
+    parts = var.path.split('.')
+    if len(parts) == 1:
+      if left.schema.field_map.get(parts[0]):
+        cols[0] = var_expr(var, left, None)
+      elif right.schema.field_map.get(parts[0]):
+        cols[1] =  var_expr(var, right, None)
+      else:
+        raise ValueError('column "{}" does not exist'.format(var.path))
+    else:
+      relation_name = parts[0]
+      if left.schema.name == relation_name:
+        cols[0] = var_expr(Var(parts[1]), left, None)
+      elif right.schema.name == relation_name:
+        cols[1] = var_expr(Var(parts[1]), right, None)
+      else: 
+        raise ValueError('relation "{}" does not exist'.format(parts[0]))
+
+  return (cols,)
+
+
+

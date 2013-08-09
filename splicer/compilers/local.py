@@ -10,7 +10,6 @@ from ..schema_interpreter import (
   field_from_expr, schema_from_projection_op, schema_from_join_op
 )
 
-from .join import nested_block_join
 
 def compile(query):
 
@@ -96,11 +95,9 @@ def join_op(operation, dataset):
   right_op = relational_op(operation.right, dataset)
   left_op = relational_op(operation.left, dataset)
 
-
   def join(ctx):
     left = left_op(ctx)
     right = right_op(ctx)
-
 
     schema = schema_from_join_op(operation, dataset)
 
@@ -110,11 +107,19 @@ def join_op(operation, dataset):
     # take the schema as an arg...
     bogus = Relation(schema, None)
 
-    comparison = value_expr(operation.bool_op, bogus, dataset)
+
+    try:
+      comparison = join_keys(left, right, operation.bool_op)
+      method = hash_join
+    except ValueError:
+      # icky cross product
+      comparison = value_expr(operation.bool_op, bogus, dataset)
+      method = nested_block_join
+
 
     return Relation(
       schema,
-      nested_block_join(left, right, comparison, ctx)
+      method(left_op, right_op, comparison, ctx)
     )
 
 
@@ -435,3 +440,6 @@ RELATION_OPS = {
   JoinOp: join_op
   
 }
+
+# sigh, oh python and your circular import
+from .join import nested_block_join, hash_join, join_keys
