@@ -9,7 +9,7 @@ from splicer import codecs
 
 class FileServer(object):
   def __init__(self, **relations):
-     self._relations = {
+    self._relations = {
       name:FileTable(name, **args) for name,args in relations.items()
     }
 
