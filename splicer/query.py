@@ -4,7 +4,7 @@ from .schema_interpreter import interpret as interpret_schema
 class Query(object):
   __slots__ = {
     'dataset': '-> DataSet',
-    'operations': '-> [Operations]',
+    'operations': 'ast.Expr',
   }
 
 
