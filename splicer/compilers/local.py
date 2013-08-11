@@ -344,7 +344,7 @@ def function_expr(expr, relation, dataset):
     )
     return function(*args)
 
-  _.__name__ = expr.name
+  _.__name__ = str(expr.name)
   return _
 
 
