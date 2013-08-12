@@ -23,6 +23,33 @@ def test_projection():
     [('Tom Tompson',), ('Sally Sanders',), ('Mark Markty',)]
   )
 
+def test_projection_wo_relation():
+  """
+  This is equivalent to select statements w/o from clauses in sql servers.
+  select 1;
+
+  | col1 |
+  +------+
+  |   1  |
+  +------+
+  """
+  dataset = DataSet()
+
+  q = Query(
+    dataset,  
+    ProjectionOp(LoadOp(''), NumberConst(1))
+  )
+
+  evaluate = compile(q)
+  
+  assert_sequence_equal(
+    list(evaluate(dict(dataset=dataset))),
+    [(1,)]
+  )
+
+
+
+
 def test_selection():
   dataset = DataSet()
   dataset.add_server(EmployeeServer())
@@ -62,6 +89,7 @@ def test_selection():
       (8901, 'Mark Markty', date(2010, 3, 1), 1234)
     ]
   )
+
 
 def test_addition():
   dataset = DataSet()

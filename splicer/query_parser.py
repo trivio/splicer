@@ -239,7 +239,7 @@ def result_column_exp(tokens):
     tokens.pop(0)
     return SelectAllExpr()
   else:
-    exp = value_exp(tokens)
+    exp = and_exp(tokens)
     if tokens and isinstance(exp, Var) and tokens[:2] == ['.','*']:
       tokens.pop(0) # '.'
       tokens.pop(0) # '*'

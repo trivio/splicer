@@ -52,9 +52,6 @@ def test_select():
   assert_is_not(qb, qb_w_select)
   eq_(qb_w_select.column_exps, 'x,y')
 
-  # selecting w/o specifying relations raises a ValueError
-  assert_raises(ValueError, lambda : qb_w_select.query)
-
   qb_w_select_and_from = qb_w_select.frm('bogus')
 
   q =  qb_w_select_and_from.query

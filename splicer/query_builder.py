@@ -1,7 +1,7 @@
 from . import Query
 from .ast import (
   RelationalOp, ProjectionOp, SelectionOp, GroupByOp, OrderByOp, 
-  SliceOp, JoinOp,
+  SliceOp, JoinOp, LoadOp,
   And, SelectAllExpr
 )
 import query_parser
@@ -61,10 +61,6 @@ class QueryBuilder(object):
 
   def frm(self, clause):
     relation = query_parser.parse_from(clause)
-    #view = self.dataset.views.get(relation.name)
-    #if view:
-    #  return self.new(load=view)
-    #else:
     return self.new(load = relation)
 
   def join(self, clause, on=None):
@@ -107,9 +103,9 @@ class QueryBuilder(object):
     """
 
     if not self.load:
-      raise ValueError('Need to specify at least one relation')
-
-    operations = self.load
+      operations = LoadOp('')
+    else:
+      operations = self.load
 
     if self.qualifiers:
       qualifiers = iter(self.qualifiers)

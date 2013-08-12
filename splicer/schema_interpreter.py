@@ -11,7 +11,9 @@ from .ast import (
   ProjectionOp, SelectionOp, GroupByOp, RenameOp, LoadOp,
   JoinOp,
   Var, Function, 
-  Const, UnaryOp, BinaryOp, AliasOp, SelectAllExpr
+  Const, UnaryOp, BinaryOp, AliasOp, SelectAllExpr,
+
+  NumberConst, StringConst, BoolConst
 )
 
 def interpret(dataset, operations):
@@ -98,11 +100,12 @@ def field_from_expr(expr, dataset, schema):
         "Can't coerce {} to {}".format(lhs_fielt.type, rhs_field.type)
       )
     else:
-      return lhs_field.new(name="{0}({1}, {2})".format(
+      return lhs_field.new(name="?column?".format(
         expr_type.__name__, 
         lhs_field.name,
         rhs_field.name
       ))
+
 
 
 def fields_from_select_all(expr, dataset, schema):
@@ -120,6 +123,16 @@ def fields_from_select_all(expr, dataset, schema):
     field_from_var(Var(f.name), schema) for f in fields
   ]
 
+
+def field_from_const(expr):
+  return Field(
+    name ='?column?',
+    type = {
+      NumberConst: 'INTEGER',
+      StringConst: 'STRING',
+      BoolConst: 'BOOLEAN'
+    }[type(expr)]
+  )
 
 
 def field_from_var(var_expr, schema):

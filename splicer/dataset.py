@@ -1,5 +1,6 @@
 from .query import Query
 from .query_builder import QueryBuilder
+from .relation import NullRelation
 
 from aggregate import Aggregate
 from .compilers import local
@@ -9,7 +10,9 @@ class DataSet(object):
 
   def __init__(self):
     self.servers = []
-    self.relation_cache = {}
+    self.relation_cache = {
+     '': NullRelation()
+    }
     self.views = {}
     self.schema_cache = {}
     self.executor = None
@@ -98,7 +101,7 @@ class DataSet(object):
     for server in self.servers:
       for name, schema in server.relations:
         self.relation_cache[name] = schema
-    return self.relation_cache.items()
+    return [item for item in self.relation_cache.items() if item[0] != '']
 
 
   def has(self, name):

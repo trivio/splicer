@@ -19,3 +19,12 @@ class Relation(object):
 
   def __iter__(self):
     return self.iterator
+
+
+class NullRelation(object):
+  """Relation used for queries that don't involve tables"""
+  schema = Schema(name="", fields=[])
+  
+  def __iter__(self):
+    return iter(((),))
+
