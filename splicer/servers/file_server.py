@@ -70,7 +70,7 @@ class FileTable(object):
         self.fields_from_content(self.decode)
       )
 
-    return Schema(fields)
+    return Schema(name=self.name, fields=fields)
 
 
   def files(self):
