@@ -348,7 +348,7 @@ def function_expr(expr, relation, dataset):
 
 def desc_expr(expr, relation, dataset):
   field = field_from_expr(expr.expr, dataset, relation.schema)
-  value = value_expr(expr.expr)
+  value = value_expr(expr.expr, relation, dataset)
 
   if field.type in ("INTEGER", "FLOAT", "DOUBLE"):
 
