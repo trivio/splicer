@@ -171,10 +171,7 @@ def group_by_op(operation, dataset):
       # so no need to order the table
       key = lambda row,ctx: None
 
-    schema = schema_from_projection_op(
-      operation, 
-      dataset
-    )
+    schema = ordered_relation.schema
 
     def group():
       records = iter(ordered_relation)
