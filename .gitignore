@@ -3,6 +3,7 @@
 *.egg/
 # results of virtualenv in the same directory
 .Python
+.noseids
 bin
 lib
 man
