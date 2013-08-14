@@ -1,6 +1,5 @@
-from ast import ProjectionOp, GroupByOp, Function
-
 from .schema_interpreter import interpret as interpret_schema
+
 class Query(object):
   __slots__ = {
     'dataset': '-> DataSet',
@@ -30,6 +29,7 @@ class Query(object):
     
   def execute(self, *params):
     return self.dataset.execute(self, *params)
+
 
 
 

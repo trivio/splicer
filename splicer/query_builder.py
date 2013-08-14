@@ -60,7 +60,10 @@ class QueryBuilder(object):
     return self.new(column_exps=column_exps)
 
   def frm(self, clause):
-    relation = query_parser.parse_from(clause)
+    if isinstance(clause, Query):
+      relation = clause.operations
+    else:
+      relation = query_parser.parse_from(clause)
     return self.new(load = relation)
 
   def join(self, clause, on=None):

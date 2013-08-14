@@ -1,5 +1,6 @@
 from .query import Query
 from .query_builder import QueryBuilder
+from .query_parser import parse_statement
 from .relation import NullRelation
 
 from aggregate import Aggregate
@@ -162,15 +163,12 @@ class DataSet(object):
     of the view.
     """
 
-
-
-
   def query(self, statement):
     """Parses the statement and returns a Query"""
-    return Query.parse(self, statement)
+    return Query(self, parse_statement(statement))
 
-  def frm(self, relation_name):
-    return QueryBuilder(self).frm(relation_name)
+  def frm(self, relation_or_stmt):
+    return QueryBuilder(self).frm(relation_or_stmt)
 
   def select(self, *cols):
     return QueryBuilder(self).select(*cols)

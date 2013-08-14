@@ -14,11 +14,18 @@ def parse(statement, root_exp = None):
   tokens = list(Tokens(statement))
   exp = root_exp(tokens)
   if tokens: 
-    raise SyntaxError('Incomplete statement')
+    raise SyntaxError('Incomplete statement {}'.format(tokens))
   return exp
 
+def parse_statement(statement):
+  return parse(statement, root_exp=select_stmt)
+
 def parse_select(relation, statement):
-  return parse(statement, root_exp=lambda tokens: select_core_exp(tokens, relation))
+  columns = parse(
+    statement, 
+    root_exp=lambda tokens: select_core_exp(tokens)
+  )
+  return projection_op(relation, columns)
 
 
 def parse_from(statement):
@@ -188,28 +195,33 @@ def var_exp(name, tokens, allowed=string.letters + '_'):
 
 
 # sql specific parsing
+terminators = ('from', 'where', 'limit', 'having', 'group', 'order')
+
+def projection_op(relation, columns):
+  if len(columns) == 1 and isinstance(columns[0], SelectAllExpr) and columns[0].table is None:
+    return relation
+  else:
+    return ProjectionOp(relation, *columns)
 
 
-def select_core_exp(tokens, relation):
+def select_core_exp(tokens):
   columns = []
 
-  while tokens:
+  while tokens and tokens[0] not in terminators:
     col = result_column_exp(tokens)
 
     columns.append(col)
     if tokens and tokens[0] == ',':
       tokens.pop(0)
 
-  if len(columns) == 1 and isinstance(columns[0], SelectAllExpr) and columns[0].table is None:
-    return relation
-  else:
-    return ProjectionOp(relation, *columns)
+  return columns
 
 def from_core_exp(tokens):
   left = join_core_exp(tokens, None).right
 
-  while tokens:
-    assert tokens[0] == ','
+  while tokens and tokens[0] not in terminators:
+    if tokens[0] != ',':
+      raise SyntaxError('Expected ","')
     tokens.pop(0)
     left = join_core_exp(tokens, left)
 
@@ -221,15 +233,55 @@ def join_core_exp(tokens, left):
     if tokens[0] == 'as':
       tokens.pop(0)
 
+  # todo parse 'on'
   if tokens:
-    if tokens[0] != ',':
+    if tokens[0] != ',' and tokens[0] not in terminators:
       alias = tokens.pop(0)
       load_op = AliasOp(alias, load_op)
 
   return JoinOp(left, load_op)
 
+def join_source(tokens):
+  source = single_source(tokens)
+  while tokens and tokens[0] == ',':
+    tokens.pop(0)
+    right = single_source(tokens)
+    if tokens and tokens[0] == 'on':
+      tokens.pop(0)
+      source = JoinOp(source, right, and_exp(tokens))
+    else:
+      source = JoinOp(source, right)
 
+  return source
 
+def single_source(tokens):
+  if tokens[0] == '(':
+    tokens.pop(0)
+    if tokens[0] == 'select':
+      source = select_stmt(tokens)
+      #if tokens[0] != ',':
+      if tokens and tokens[0] not in terminators:
+        if tokens[0] == 'as':
+          tokens.pop(0)
+        alias = tokens.pop(0)
+        source = AliasOp(alias, source)
+    else:
+      source = join_source(tokens)
+
+    if tokens[0] != ')':
+      raise SyntaxError('Expected ")"')
+      return source
+    else:
+      tokens.pop(0)
+  else:
+    source = LoadOp(tokens.pop(0))
+    #if tokens and tokens[0] != ',':
+    if tokens and tokens[0] != ',' and tokens[0] not in terminators:
+      if tokens[0] == 'as':
+        tokens.pop(0)
+      alias = tokens.pop(0)
+      source = AliasOp(alias, source)
+    return source
 
 
 
@@ -253,13 +305,13 @@ def result_column_exp(tokens):
         return exp
 
 
-def where_core_exp(tokens):
-  return and_exp()
+def where_core_expr(tokens, relation):
+  return SelectionOp(relation, and_exp(tokens))
 
 def order_by_core_expr(tokens):
   columns = []
 
-  while tokens:
+  while tokens and tokens[0] not in terminators:
     col = value_exp(tokens)
     if tokens: 
       if tokens[0].lower() == "desc":
@@ -282,10 +334,61 @@ def order_by_core_expr(tokens):
 def group_by_core_expr(tokens):
 
   columns = []
-  while tokens:
+  while tokens and tokens[0] not in terminators:
     token = tokens.pop(0)
     columns.append(var_exp(token, tokens))
     if tokens and tokens[0] == ',':
       tokens.pop(0)
 
   return columns
+
+
+def select_stmt(tokens):
+  if tokens[0] != 'select':
+    raise SyntaxError
+  tokens.pop(0)
+
+  select_core = select_core_exp(tokens) 
+  #while tokens and tokens[0] not in terminators:
+  #  select_core.append(tokens.pop(0))
+
+  if tokens and tokens[0] == 'from' :
+    tokens.pop(0)
+    relation = join_source(tokens) #from_core_exp(tokens)
+  else:
+    relation = LoadOp('')
+
+
+  if tokens[:1] == ['where']:
+    tokens.pop(0)
+    relation = where_core_expr(tokens, relation)
+
+  
+  relation =  projection_op(relation, select_core)
+
+  if tokens[:2] == ['group', 'by']:
+    tokens.pop(0)
+    tokens.pop(0)
+  
+    relation = GroupByOp(relation, *group_by_core_expr(tokens))
+
+
+  if tokens[:2] == ['order', 'by']:
+    tokens.pop(0)
+    tokens.pop(0)
+    relation = OrderByOp(relation, *order_by_core_expr(tokens))
+
+  start = stop = None
+  if tokens and tokens[0] =='limit':
+    tokens.pop(0)
+    stop = value_exp(tokens).const
+
+  if tokens and tokens[0] == 'offset':
+    start = value_exp(tokens).const
+    if stop is not None:
+      stop += start
+
+  if not( start is None and stop is None):
+    relation = SliceOp(relation, start, stop)
+    
+  return relation

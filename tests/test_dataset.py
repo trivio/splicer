@@ -54,3 +54,10 @@ def test_complier():
   query = dataset.frm('bogus').query
 
   table = dataset.execute(query)
+
+def test_query():
+  dataset = DataSet()
+  dataset.query('select 1').execute()
+
+
+

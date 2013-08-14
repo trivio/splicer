@@ -1,16 +1,7 @@
 from nose.tools import *
 from splicer import query_parser
 
-from splicer.ast import (
-  NumberConst, StringConst, NullConst, Var, Function, Tuple,
-  NegOp, NotOp, MulOp, DivOp, ItemGetterOp, ParamGetterOp,
-  IsOp, IsNotOp,
-  AddOp, SubOp, LoadOp,
-  And, Or,
-
-  ProjectionOp, SelectionOp, RenameOp, SelectAllExpr,
-  GroupByOp
-)
+from splicer.ast import *
 
 def test_parse_int():
   ast = query_parser.parse('123')
@@ -181,6 +172,118 @@ def test_group_by_core_expr():
     [Var('x'), Var('y')]
   )
 
+def test_parse_statement():
+  ast = query_parser.parse_statement('select 1')
+
+  eq_(
+    ast,
+    ProjectionOp(LoadOp(''), NumberConst(1))
+  )
 
 
+  ast = query_parser.parse_statement('select 1 from employees')
+
+  eq_(
+    ast,
+    ProjectionOp(LoadOp('employees'), NumberConst(1))
+  )
+
+  ast = query_parser.parse_statement('select full_name from employees')
+
+  eq_(
+    ast,
+    ProjectionOp(LoadOp('employees'), Var('full_name'))
+  )
+
+  ast = query_parser.parse_statement('''
+    select full_name from employees as employee
+  ''')
+
+  eq_(
+    ast,
+    ProjectionOp(
+      AliasOp('employee',LoadOp('employees')), 
+      Var('full_name')
+    )
+  )
+
+  ast = query_parser.parse_statement('''
+    select full_name 
+    from employees as employee, employees as manager
+  ''')
+
+
+  eq_(
+    ast,
+    ProjectionOp(
+      JoinOp(
+        AliasOp('employee',LoadOp('employees')),
+        AliasOp('manager',LoadOp('employees'))
+      ), 
+      Var('full_name')
+    )
+  )
+
+
+  ast = query_parser.parse_statement('''
+    select full_name 
+    from employees
+    where manager_id is not null
+  ''')
+
+  eq_(
+    ast,
+    ProjectionOp(
+      SelectionOp(
+        LoadOp('employees'),
+        IsNotOp(Var('manager_id'), NullConst())
+      ), 
+      Var('full_name')
+    )
+  )
+
+  ast = query_parser.parse_statement('''
+    select full_name 
+    from employees as employee, employees as managers on employee.manager_id = managers.employee_id
+
+  ''')
+
+
+  ast = query_parser.parse_statement('''
+    select manager_id, count() from employees
+  ''')
+
+  ast = query_parser.parse_statement('''
+    select manager_id, count() from 
+    employees
+    group by manager_id
+  ''')
+
+  ast = query_parser.parse_statement('''
+    select manager_id, count() from 
+    employees
+    group by manager_id
+    order by count
+  ''')
+
+  op = OrderByOp(
+    GroupByOp(
+      ProjectionOp(
+        LoadOp('employees'),
+        Var('manager_id'),
+        Function('count')
+      ),
+      Var('manager_id')
+    ),
+    Var('count')
+  )
+
+  eq_(
+    ast,
+    op
+  )
+
+  ast = query_parser.parse_statement(''' 
+    select count() from top_10, top_10
+  ''')
 
