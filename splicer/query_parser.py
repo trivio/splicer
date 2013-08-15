@@ -195,7 +195,7 @@ def var_exp(name, tokens, allowed=string.letters + '_'):
 
 
 # sql specific parsing
-terminators = ('from', 'where', 'limit', 'having', 'group', 'order')
+terminators = ('from', 'where', 'limit', 'offset', 'having', 'group', 'order')
 
 def projection_op(relation, columns):
   if len(columns) == 1 and isinstance(columns[0], SelectAllExpr) and columns[0].table is None:
@@ -322,11 +322,8 @@ def order_by_core_expr(tokens):
 
     columns.append(col)
 
-    if tokens:
-      if tokens[0] == ',':
-        tokens.pop(0)
-      else:
-        raise SyntaxError()
+    if tokens and tokens[0] == ',':
+      tokens.pop(0)
 
 
   return columns
