@@ -291,12 +291,8 @@ def test_parse_statement():
   select t1.* from top_10 as t1
   ''')
 
-
-  import pdb; pdb.set_trace()
   ast = query_parser.parse_statement(''' 
   select manager_id, count() from docs group by manager_id order by count desc limit 10
   ''')
-
-  pass
   
 
