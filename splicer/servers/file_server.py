@@ -49,28 +49,35 @@ class FileTable(object):
   
     self.decode = options.pop('decode', "none")
 
+    self._schema = None
+    if 'schema' in options:
+      self._schema = Schema(**options.pop('schema'))
+
     if options:
       raise ValueError("Unrecognized options {}".format(options.keys()))
 
 
   @property
   def schema(self):
-    fields = [
-      Field(name=name, type="STRING") for name in self.pattern_columns
-    ]
+    if self._schema is None:
+      fields = [
+        Field(name=name, type="STRING") for name in self.pattern_columns
+      ]
 
-    if self.content_column:
-      fields.append(Field(name=self.content_column, type='BINARY'))
+      if self.content_column:
+        fields.append(Field(name=self.content_column, type='BINARY'))
 
-    if self.filename_column:
-      fields.append(Field(name=self.filename_column, type='STRING'))
+      if self.filename_column:
+        fields.append(Field(name=self.filename_column, type='STRING'))
 
-    if self.decode != "none":
-      fields.extend(
-        self.fields_from_content(self.decode)
-      )
+      if self.decode != "none":
+        fields.extend(
+          self.fields_from_content(self.decode)
+        )
+      self._schema = Schema(name=self.name, fields=fields)
 
-    return Schema(name=self.name, fields=fields)
+
+    return self._schema
 
 
   def files(self):
