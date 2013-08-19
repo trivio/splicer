@@ -2,7 +2,6 @@ from __future__ import absolute_import
 import math
 import inspect
 
-from .. import Field
 
 def init(dataset):
   for name,func in inspect.getmembers(math, inspect.isbuiltin):

@@ -2,8 +2,6 @@ from __future__ import absolute_import
 import string
 import inspect
 
-from .. import Field
-
 def null_if_arg_is_null(f):
   """
   Wrap a standard python function which inspects the args for None values.

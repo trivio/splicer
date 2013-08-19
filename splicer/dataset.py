@@ -23,13 +23,8 @@ class DataSet(object):
     self.dump_func = None
     self.udfs = {}
 
-    self.aggregates = {
-      "count": Aggregate(
-        function=lambda state: state + 1,
-        returns=Field(name="count", type="INTEGER"),
-        initial=0
-      )
-    }
+    self.aggregates = {}
+    
     functions.init(self)
 
 
@@ -54,6 +49,13 @@ class DataSet(object):
 
     self.views[name] = operations
     
+  def aggregate(self, returns=None, initial=None, name=None):
+    def _(func, name):
+      if name is None:
+        name = func.__name__
+      self.add_aggregate(name, func, returns, initial)
+      return func
+    return _
 
   def function(self, returns=None, name=None):
     """Decorator for registering functions
@@ -69,8 +71,15 @@ class DataSet(object):
       if name is None:
         name = func.__name__
       self.add_function(name, func, returns)
+      return func
     return _ 
 
+  def add_aggregate(self, name, func, returns, initial):
+    self.aggregates[name] = Aggregate(
+      function=func, 
+      returns=returns, 
+      initial=initial
+    )
 
 
   def add_function(self, name, function, returns=None):
