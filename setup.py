@@ -14,7 +14,7 @@ setup(
   name='splicer',
 
   version='0.0.6',
-  description='the world is a database',
+  description='the world is a database now you can query it with SQL',
   long_description=README,
   author='Scott Robertson',
   author_email='scott@triv.io',

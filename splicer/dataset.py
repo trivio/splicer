@@ -7,6 +7,8 @@ from aggregate import Aggregate
 from .compilers import local
 from .field import Field
 
+from . import functions
+
 class DataSet(object):
 
   def __init__(self):
@@ -28,6 +30,7 @@ class DataSet(object):
         initial=0
       )
     }
+    functions.init(self)
 
 
 
@@ -71,6 +74,9 @@ class DataSet(object):
 
 
   def add_function(self, name, function, returns=None):
+    if name in self.udfs:
+      raise ValueError("Function {} already registered".format(name))
+
     if returns:
       function.returns = Field(**returns)
     else:
