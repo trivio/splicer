@@ -1,5 +1,5 @@
 # functions for manipulating operations go here
-from ast import LoadOp, JoinOp, EqOp, Var
+from ast import LoadOp, JoinOp, EqOp, RelationalOp, Function, Var
 
 def replace_views(operations, dataset):
   def view_replacer(node):
@@ -34,6 +34,14 @@ def walk(operation, visitor):
     left = walk(operation.left, visitor)
     right = walk(operation.right, visitor)
     return visitor(operation.new(left=left, right=right))
+  elif isinstance(operation, Function):
+    args = []
+    for arg in operation.args:
+      if isinstance(arg, RelationalOp):
+        arg = walk(arg, visitor)
+      args.append(arg)
+    return visitor(operation.new(args=args))
+
   else:
     child = walk(operation.relation, visitor)
     return visitor(operation.new(relation=child))

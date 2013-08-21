@@ -106,7 +106,6 @@ def multiplicative_exp(tokens):
   return lhs
 
 def unary_exp(tokens):
-  assert len(tokens)
   
   if tokens[0] == '-':
     tokens.pop(0)
@@ -146,7 +145,7 @@ def value_exp(tokens):
     return NullConst()
   elif token[0] in string.digits:
     return NumberConst(int(token))
-  elif token.startswith('"'):
+  elif token[0] in ("'",'"'):
     return StringConst(token[1:-1])
   elif token == '(':
     return tuple_exp(tokens)
@@ -176,7 +175,9 @@ def tuple_exp(tokens):
 
 def function_exp(name, tokens):
   token = tokens.pop(0)
-  assert token == '('
+  if token != '(':
+    raise SyntaxError('Expecting "("')
+
 
   args = tuple_exp(tokens)
   return Function(name, *args.exprs)
@@ -223,6 +224,7 @@ def from_core_exp(tokens):
     if tokens[0] != ',':
       raise SyntaxError('Expected ","')
     tokens.pop(0)
+
     left = join_core_exp(tokens, left)
 
   return left
@@ -245,6 +247,16 @@ def join_source(tokens):
   source = single_source(tokens)
   while tokens and tokens[0] == ',':
     tokens.pop(0)
+
+    # if it's a relational function the statement
+    # may look like 
+    # select ... from func(select * from foo, 'some constant')
+    # we use the fact that there's something other than a 
+    # Var to end the statement... Feels hacky
+    expr = value_exp(tokens[:1])
+    if not isinstance(expr, Var):
+       break
+
     right = single_source(tokens)
     if tokens and tokens[0] == 'on':
       tokens.pop(0)
@@ -274,8 +286,12 @@ def single_source(tokens):
     else:
       tokens.pop(0)
   else:
-    source = LoadOp(tokens.pop(0))
-    #if tokens and tokens[0] != ',':
+
+    if tokens[1:2] == ['(']:
+      source = relation_function_exp(tokens.pop(0), tokens)
+    else:
+      source = LoadOp(tokens.pop(0))
+
     if tokens and tokens[0] != ',' and tokens[0] not in terminators:
       if tokens[0] == 'as':
         tokens.pop(0)
@@ -283,6 +299,36 @@ def single_source(tokens):
       source = AliasOp(alias, source)
     return source
 
+
+def relation_function_exp(name, tokens):
+  token = tokens.pop(0)
+  if token != '(':
+    raise SyntaxError("Expecting '('")
+
+  args = []
+
+  while tokens and tokens[0] != ")":
+    if tokens[0] == 'select':
+      args.append(select_stmt(tokens))
+    else:
+      expr = value_exp(tokens)
+      if isinstance(expr, Var):
+        args.append(LoadOp(expr.path))
+      elif isinstance(expr, Const):
+        args.append(expr)
+      else:
+        raise ValueError("Only constants, relationame or select queries allowed")
+
+    if tokens[0] == ',':
+      tokens.pop(0)
+
+ 
+  if tokens[0] != ')':
+    raise SyntaxError("Expecting ')'")
+  else:
+    tokens.pop(0)
+
+  return Function(name, *args)
 
 
 def result_column_exp(tokens):

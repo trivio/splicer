@@ -294,5 +294,24 @@ def test_parse_statement():
   ast = query_parser.parse_statement(''' 
   select manager_id, count() from docs group by manager_id order by count desc limit 10
   ''')
+
+
+def test_table_functions():
+
+  ast = query_parser.parse_statement(''' 
+  select *
+  from flatten(docs, 'scripts')
+  ''')
   
+  op = Function('flatten', LoadOp('docs'), StringConst('scripts'))
+
+  eq_(ast,op)
+
+  ast = query_parser.parse_statement(''' 
+  select *
+  from flatten(select * from docs, "scripts")
+  ''')
+
+  eq_(ast,op)
+
 

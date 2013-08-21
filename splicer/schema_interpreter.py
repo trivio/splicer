@@ -58,6 +58,15 @@ def schema_from_projection_op(projection_op, dataset):
   
   return Schema(fields)
 
+def schema_from_projection_schema(projection_op, schema, dataset):
+  fields = [
+    field
+    for expr in projection_op.exprs
+    for field in fields_from_expr(expr,dataset,schema)
+  ]
+  return Schema(fields)
+
+
 def schema_from_join_op(join_op, dataset):
   left = interpret(dataset, join_op.left)
   right = interpret(dataset, join_op.right)

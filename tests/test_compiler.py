@@ -67,7 +67,7 @@ def test_selection():
   assert_sequence_equal(
     list(evaluate(dict(dataset=dataset))),
     [
-      (1234, 'Tom Tompson', date(2009, 1, 17), None),
+      (1234, 'Tom Tompson', date(2009, 1, 17), None, ()),
     ]
   )
 
@@ -85,8 +85,8 @@ def test_selection():
   assert_sequence_equal(
     list(evaluate(dict(dataset=dataset))),
     [
-      (4567, 'Sally Sanders', date(2010, 2, 24), 1234),
-      (8901, 'Mark Markty', date(2010, 3, 1), 1234)
+      (4567, 'Sally Sanders', date(2010, 2, 24), 1234, ()),
+      (8901, 'Mark Markty', date(2010, 3, 1), 1234, ('sales', 'marketing'))
     ]
   )
 
@@ -121,9 +121,9 @@ def test_order_by():
   assert_sequence_equal(
     list(evaluate(dict(dataset=dataset))),
     [
-      (8901, 'Mark Markty', date(2010, 3, 1), 1234),
-      (4567, 'Sally Sanders', date(2010, 2, 24), 1234),
-      (1234, 'Tom Tompson', date(2009, 1, 17), None),
+      (8901, 'Mark Markty', date(2010, 3, 1), 1234, ('sales', 'marketing')),
+      (4567, 'Sally Sanders', date(2010, 2, 24), 1234, ()),
+      (1234, 'Tom Tompson', date(2009, 1, 17), None, ()),
     ]
   )
 
@@ -141,9 +141,9 @@ def test_order_by_asc():
   assert_sequence_equal(list(evaluate(dict(dataset=dataset)))
     ,
     [
-      (1234, 'Tom Tompson', date(2009, 1, 17), None),
-      (4567, 'Sally Sanders', date(2010, 2, 24), 1234),
-      (8901, 'Mark Markty', date(2010, 3, 1), 1234),
+      (1234, 'Tom Tompson', date(2009, 1, 17), None, ()),
+      (4567, 'Sally Sanders', date(2010, 2, 24), 1234, ()),
+      (8901, 'Mark Markty', date(2010, 3, 1), 1234, ('sales', 'marketing')),
     ]
   )
 
@@ -255,7 +255,7 @@ def test_limit():
   assert_sequence_equal(
     list(evaluate(dict(dataset=dataset))),
     [
-      (1234, 'Tom Tompson', date(2009, 1, 17), None),
+      (1234, 'Tom Tompson', date(2009, 1, 17), None, ()),
     ]
   )
 
@@ -272,8 +272,8 @@ def test_offset():
   assert_sequence_equal(
     list(evaluate(dict(dataset=dataset))),
     [
-      (4567, 'Sally Sanders', date(2010, 2, 24), 1234),
-      (8901, 'Mark Markty', date(2010, 3, 1), 1234),
+      (4567, 'Sally Sanders', date(2010, 2, 24), 1234, ()),
+      (8901, 'Mark Markty', date(2010, 3, 1), 1234, ('sales', 'marketing')),
  
     ]
   )
@@ -291,7 +291,7 @@ def test_offset_and_limit():
   assert_sequence_equal(
     list(evaluate(dict(dataset=dataset))),
     [
-      (4567, 'Sally Sanders', date(2010, 2, 24), 1234),
+      (4567, 'Sally Sanders', date(2010, 2, 24), 1234, ()),
     ]
   )
 
@@ -330,8 +330,8 @@ def test_self_join():
   assert_sequence_equal(
     list(evaluate(dict(dataset=dataset))),
     [
-      (4567, 'Sally Sanders', date(2010, 2, 24), 1234, 1234, 'Tom Tompson', date(2009, 1, 17), None),
-      (8901, 'Mark Markty', date(2010, 3, 1), 1234, 1234, 'Tom Tompson', date(2009, 1, 17), None)
+      (4567, 'Sally Sanders', date(2010, 2, 24), 1234, (), 1234, 'Tom Tompson', date(2009, 1, 17), None, ()),
+      (8901, 'Mark Markty', date(2010, 3, 1), 1234, ('sales', 'marketing'), 1234, 'Tom Tompson', date(2009, 1, 17), None, ())
     ]
   )
 
@@ -359,7 +359,50 @@ def test_self_join_with_projection():
   assert_sequence_equal(
     list(evaluate(dict(dataset=dataset))),
     [
-      (4567, 'Sally Sanders', date(2010, 2, 24), 1234, 'Tom Tompson'),
-      (8901, 'Mark Markty', date(2010, 3, 1), 1234,  'Tom Tompson')
+      (4567, 'Sally Sanders', date(2010, 2, 24), 1234, (), 'Tom Tompson'),
+      (8901, 'Mark Markty', date(2010, 3, 1), 1234,  ('sales', 'marketing'), 'Tom Tompson')
     ]
   )
+
+
+def test_function_in_from():
+  dataset = DataSet()
+  dataset.add_server(EmployeeServer())
+
+  q = Query(
+    dataset,  
+    ProjectionOp(
+      Function('flatten', LoadOp('employees'), StringConst('roles')),
+      Var('manager_id'),
+      Var('roles')
+    )
+  )
+
+  evaluate = compile(q)
+
+  assert_sequence_equal(
+    list(evaluate(dict(dataset=dataset))),
+    [
+      (1234, 'sales'),
+      (1234, 'marketing')
+    ]
+  )
+
+  q = Query(
+    dataset, 
+    Function('flatten', LoadOp('employees'), StringConst('roles'))
+  )
+
+  evaluate = compile(q)
+
+  assert_sequence_equal(
+    list(evaluate(dict(dataset=dataset))),
+    [
+      [8901, 'Mark Markty', date(2010, 3, 1), 1234, 'sales'],
+      [8901, 'Mark Markty', date(2010, 3, 1), 1234, 'marketing']
+    ]
+  )
+
+
+
+

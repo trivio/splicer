@@ -50,7 +50,10 @@ class DictServer(object):
 class DictTable(Table):
   def __init__(self, server, name, schema, rows):
     super(self.__class__, self).__init__(server, name, schema)
-    self.key_index = [f.name for f in self.schema.fields]
+    self.key_index = [
+      (f.name, () if f.mode == 'REPEATED' else None)
+      for f in self.schema.fields
+    ]
     self._rows = rows
 
 
@@ -58,6 +61,6 @@ class DictTable(Table):
     key_index = self.key_index
 
     return (
-      tuple(row.get(key) for key in key_index)
+      tuple(row.get(key, default) for key, default in key_index)
       for row in self._rows
     )

@@ -7,7 +7,8 @@ from ..aggregate import Aggregate
 from ..relation import Relation
 from ..operations import replace_views
 from ..schema_interpreter import (
-  field_from_expr, schema_from_projection_op, schema_from_join_op
+  field_from_expr, schema_from_projection_op, schema_from_join_op,
+  schema_from_projection_schema
 )
 
 
@@ -58,7 +59,9 @@ def projection_op(operation, dataset):
       for column in group
     ])
 
-    schema = schema_from_projection_op(operation, dataset)
+    schema = schema_from_projection_schema(operation, relation.schema, dataset)
+ 
+
     return Relation(
       schema,
       (
@@ -208,6 +211,26 @@ def slice_op(expr, dataset):
       islice(relation, expr.start, expr.stop)
     )
   return limit
+
+def relational_function(op, dataset):
+  """Invokes a function that operates on a whole relation"""
+  function = dataset.get_function(op.name)
+
+  args = []
+  for arg_expr in op.args:
+    if isinstance(arg_expr, Const):
+      args.append(lambda ctx: arg_expr.const)
+    elif isinstance(arg_expr, RelationalOp):
+      args.append(relational_op(arg_expr, dataset))
+    else:
+      raise ValueError(
+        "Only Relational Operations and constants "
+        "are allowed in table functions"
+      )
+
+  def invoke(ctx):
+    return function(*[a(ctx) for a in args])
+  return invoke
 
 def is_aggregate(expr, dataset):
   """Returns true if the expr is an aggregate function."""
@@ -434,7 +457,8 @@ RELATION_OPS = {
   OrderByOp: order_by_op,
   GroupByOp: group_by_op,
   SliceOp: slice_op,
-  JoinOp: join_op
+  JoinOp: join_op,
+  Function: relational_function
   
 }
 
