@@ -98,16 +98,20 @@ class DivOp(BinaryOp):
   __slots__ = ('lhs', 'rhs')
 
 
-class NullConst(Expr):
-  """Null or None"""
-  __slots__ = ()
-  const = None
 
 class Const(Expr):
   __slots__ = ('const',)
 
   def __init__(self, const):
     self.const = const
+
+class NullConst(Const):
+  """Null or None"""
+  __slots__ = ()
+  const = None
+  def __init__(self):
+    pass
+
 
 class NumberConst(Const):
   """Integer or Float"""
