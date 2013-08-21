@@ -3,7 +3,7 @@ from .query_builder import QueryBuilder
 from .query_parser import parse_statement
 from .relation import NullRelation
 
-from aggregate import Aggregate
+from .aggregate import Aggregate
 from .compilers import local
 from .field import Field
 
