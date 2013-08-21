@@ -7,6 +7,8 @@ from .aggregate import Aggregate
 from .compilers import local
 from .field import Field
 
+from .operations import replace_views
+
 from . import functions
 
 class DataSet(object):
@@ -102,7 +104,11 @@ class DataSet(object):
       raise NameError("No function named {}".format(name))
 
   def get_view(self, name):
-    return self.views.get(name)
+    view = self.views.get(name)
+    if view:
+      return replace_views(view,self)
+    else:
+      return None
 
   @property
   def relations(self):

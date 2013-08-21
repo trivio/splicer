@@ -2,6 +2,8 @@ from nose.tools import *
 
 from splicer import DataSet, Table, Query
 from splicer.query_builder import QueryBuilder
+from splicer.ast import LoadOp, ProjectionOp, Var
+
 from .fixtures.mock_server import MockServer
 
 
@@ -58,6 +60,37 @@ def test_complier():
 def test_query():
   dataset = DataSet()
   dataset.query('select 1').execute()
+
+
+def test_views():
+  dataset = DataSet()
+  dataset.add_server(MockServer())
+
+
+  # create a view off of an existing table
+  dataset.select('x').frm('bogus').create_view('only_x')
+
+  view = dataset.get_view('only_x')
+
+  eq_(
+    view,
+    ProjectionOp(LoadOp('bogus'), Var('x'))
+  )
+
+  # create a view off of a view
+  dataset.select('x').frm('only_x').create_view('only_x_from_x')
+
+  view = dataset.get_view('only_x_from_x')
+
+  eq_(
+    view,
+    # Todo: Implement a query optimizer that eliminates
+    # redunant projections ops like the one we see below
+    ProjectionOp(
+      ProjectionOp(LoadOp('bogus'), Var('x')),
+      Var('x')
+    )
+  )
 
 
 
