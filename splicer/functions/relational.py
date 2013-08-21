@@ -17,7 +17,10 @@ def flatten(relation, path):
     raise ValueError("Can not flatten non-repeating field {}".format(path))
 
   if field.type == 'RECORD':
-    ffields = field.fields
+    ffields = [
+      f.new(name="{}_{}".format(field.name, f.name)) 
+      for f in field.fields
+    ]
   else:
     ffields = [field.new(mode="NULLABLE")]
 
