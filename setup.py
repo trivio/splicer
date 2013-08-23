@@ -31,6 +31,7 @@ setup(
   packages = find_packages(),
   setup_requires=[
     'nose>=1.3.0',
-    'coverage'
+    'coverage',
+    'codd'
   ]
 )
