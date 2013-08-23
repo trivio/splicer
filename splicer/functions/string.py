@@ -28,3 +28,7 @@ def init(dataset):
       null_if_arg_is_null(func),
       returns=dict(name=name, type="STRING")
     )
+
+  @dataset.function(returns=dict(name="length", type="INTEGER"))
+  def length(s):
+    return len(s)
