@@ -115,7 +115,7 @@ class FileTable(object):
       partition_data, path  = self.match_info().next()
     except StopIteration:
       return []
-    relation = codecs.relation_from_path(path)
+    relation = codecs.relation_from_path(path, decode)
     if relation:
       return relation.schema.fields
     else:
@@ -148,7 +148,7 @@ class FileTable(object):
 
     if self.decode != "none":
       def decode(partition_info, path):
-        relation = codecs.relation_from_path(path)
+        relation = codecs.relation_from_path(path, self.decode)
         return (
           partition_info + tuple(row)
           for row in relation
@@ -183,4 +183,5 @@ class FileTable(object):
     for partition_info, path in self.match_info():
       for row in extract(partition_info, path):
         yield row
+
 

@@ -23,7 +23,7 @@ def relation_from(stream, mime_type):
     return None
 
 def relation_from_path(path, mime_type=None, encoding=None):
-  if not mime_type:
+  if mime_type is None or mime_type == 'auto':
     mime_type, encoding = mimetypes.guess_type(path)
 
   return relation_from(open(path), mime_type)
