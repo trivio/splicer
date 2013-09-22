@@ -13,16 +13,27 @@ def flatten(relation, path):
   schema = relation.schema
 
   field = schema[path]
-  if field.mode != "REPEATED":
+
+
+  if field.mode != "REPEATED" and not field.type=="RECORD":
     raise ValueError("Can not flatten non-repeating field {}".format(path))
 
   field_pos = schema.field_position(path)
 
   def flatten_repeated_scalar(row):
+
     for value in row[field_pos]:
       new_row = list(row)
       new_row[field_pos] = value 
 
+      yield new_row
+
+  def flatten_single_record(row):
+    value  = row[field_pos]
+    if value:
+      new_row = list(row)
+      values = [value.get(f.name) for f in field.fields]
+      new_row[field_pos:field_pos+1] = values
       yield new_row
 
   def flatten_repeated_record(row):
@@ -40,7 +51,12 @@ def flatten(relation, path):
       f.new(name="{}_{}".format(field.name, f.name)) 
       for f in field.fields
     ]
-    flatten_row = flatten_repeated_record
+
+    if field.mode == "REPEATED":
+      flatten_row = flatten_repeated_record
+    else:
+      flatten_row = flatten_single_record
+
   else:
     ffields = [field.new(mode="NULLABLE")]
     flatten_row = flatten_repeated_scalar
