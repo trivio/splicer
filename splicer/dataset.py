@@ -51,11 +51,11 @@ class DataSet(object):
 
     self.views[name] = operations
     
-  def aggregate(self, returns=None, initial=None, name=None):
+  def aggregate(self, returns=None, initial=None, name=None, finalize=None):
     def _(func, name):
       if name is None:
         name = func.__name__
-      self.add_aggregate(name, func, returns, initial)
+      self.add_aggregate(name, func, returns, initial, finalize)
       return func
     return _
 
@@ -76,11 +76,12 @@ class DataSet(object):
       return func
     return _ 
 
-  def add_aggregate(self, name, func, returns, initial):
+  def add_aggregate(self, name, func, returns, initial, finalize=None):
     self.aggregates[name] = Aggregate(
       function=func, 
       returns=returns, 
-      initial=initial
+      initial=initial,
+      finalize=finalize
     )
 
 
