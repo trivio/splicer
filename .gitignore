@@ -1,6 +1,7 @@
 *.py[c|o]
 *.egg-info/
 *.egg/
+*.egg
 # results of virtualenv in the same directory
 .Python
 .noseids
