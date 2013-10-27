@@ -4,10 +4,6 @@ from .. import Schema
 decoders_by_mime_type = {}
 
 def decodes(mime_type):
-  if mime_type in decoders_by_mime_type:
-    raise ValueError(
-      'Decoder for {} has already been registered'.format(mime_type)
-    )
 
   def wraps(f):
     decoders_by_mime_type[mime_type] = f
