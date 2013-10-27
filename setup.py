@@ -12,7 +12,7 @@ except IOError:
 setup(
   name='splicer',
 
-  version="0.0.9",
+  version="0.0.10",
   description='the world is a database now you can query it with SQL',
   long_description=README,
   author='Scott Robertson',
