@@ -57,7 +57,7 @@ def test_file_server_with_schemas():
   )
 
   assert_sequence_equal(
-    list(songs),
+    sorted(songs),
     [
       ("artist{}".format(artist), 'album{}'.format(album), str(track), 'ogg', '')
       for artist in range(3)
