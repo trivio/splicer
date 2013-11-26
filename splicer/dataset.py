@@ -90,7 +90,10 @@ class DataSet(object):
       raise ValueError("Function {} already registered".format(name))
 
     if returns:
-      function.returns = Field(**returns)
+      if callable(returns):
+        function.returns = returns
+      else:
+        function.returns = Field(**returns)
     else:
       function.returns = None
 

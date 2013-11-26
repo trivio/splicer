@@ -38,6 +38,16 @@ def interpret(dataset, operations):
 def schema_from_relation(operation, dataset):
   return interpret(dataset, operation.relation)
 
+def schema_from_function_op(operation, dataset):
+
+  func = dataset.get_function(operation.name)
+  if callable(func.returns):
+    schema = interpret(dataset, operation.args[0])
+
+    return func.returns(schema, *[a.const for a in operation.args[1:]])
+  else:
+    return func.returns
+
 def schema_from_load(operation, dataset):
   return dataset.get_relation(operation.name).schema
 
@@ -171,5 +181,6 @@ op_type_to_schemas = {
   LoadOp: schema_from_load,
   ProjectionOp: schema_from_projection_op,
   AliasOp: schema_from_alias_op,
-  JoinOp: schema_from_join_op
+  JoinOp: schema_from_join_op,
+  Function: schema_from_function_op
 }

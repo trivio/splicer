@@ -26,8 +26,6 @@ def test_no_operations():
 
 def test_table_function():
   """
-  Without any operations the schema should be equal to the given
-  relation.
   """
 
   dataset   = mock_data_set()
@@ -37,6 +35,8 @@ def test_table_function():
     Function('flatten', LoadOp('employees'), StringConst('roles'))
   )
 
+  eq_(schema['roles'].type,'STRING')
+  eq_(schema['roles'].mode,'NULLABLE')
 
 
 
