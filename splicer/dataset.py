@@ -1,7 +1,7 @@
 from .query import Query
 from .query_builder import QueryBuilder
 from .query_parser import parse_statement
-from .relation import NullRelation
+from .relation import NullRelation, NullAdapter
 
 from .aggregate import Aggregate
 from .compilers import local
@@ -14,10 +14,10 @@ from . import functions
 class DataSet(object):
 
   def __init__(self):
-    self.servers = []
-    self.relation_cache = {
-     '': NullRelation()
-    }
+    self.adapters = [NullAdapter()]
+
+    self.relation_cache = {}
+
     self.views = {}
     self.schema_cache = {}
     self.executor = None
@@ -40,8 +40,8 @@ class DataSet(object):
 
     """
 
-    if server not in self.servers:
-      self.servers.append(server)
+    if server not in self.adapters:
+      self.adapters.append(server)
 
   def create_view(self, name, query_or_operations):
     if isinstance(query_or_operations, basestring):
@@ -124,14 +124,17 @@ class DataSet(object):
     As a side effect the relation_cache will be updated.
     """
 
-    for server in self.servers:
+    for server in self.adapters:
       for name, schema in server.relations:
         self.relation_cache[name] = schema
     return [item for item in self.relation_cache.items() if item[0] != '']
 
 
-  def has(self, name):
-    return self.get_relation(name)
+
+  def adapter_for(self, relation):
+    for adapter in self.adapters:
+      if adapter.has(relation):
+        return adapter
 
   def get_relation(self, name):
     """Returns the relation for the given name.
@@ -142,7 +145,7 @@ class DataSet(object):
     """
     relation = self.relation_cache.get(name)
     if relation is None:
-      for server in self.servers:
+      for server in self.adapters:
         relation = server.get_relation(name)
         if relation:
           self.relation_cache[name] = relation

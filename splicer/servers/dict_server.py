@@ -1,6 +1,7 @@
 from splicer import Table
+from . import Adapter
 
-class DictServer(object):
+class DictServer(Adapter):
   """
   A server for working with lists of dictionaries.
   """
@@ -42,8 +43,15 @@ class DictServer(object):
       for name, table in self._tables.items()
     ]
 
+
+  def has(self, relation):
+    return self._tables.has_key(relation)
+
   def get_relation(self, name):
     return self._tables.get(name)
+
+  def table_scan(self, name, ctx):
+    return self._tables[name]
 
 
 

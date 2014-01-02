@@ -55,13 +55,9 @@ def isa_op(loc):
 def relational_op(dataset, loc, operation):
   return loc.replace(RELATION_OPS[type(operation)](dataset,  operation))
 
-def load_relation(dataset, loc, operation):  
-  def load(ctx):
-    return dataset.get_relation(operation.name)
-  return loc.replace(load)
-
-
-
+def load_relation(dataset, loc, operation):
+  adapter = dataset.adapter_for(operation.name)
+  return adapter.evaluate(loc)
 
 def alias_op(dataset, operation):
   def alias(ctx):

@@ -1,4 +1,5 @@
 from .schema import Schema
+from .servers import Adapter
 
 class Relation(object):
   def __init__(self, schema, iterator):
@@ -20,7 +21,16 @@ class Relation(object):
   def __iter__(self):
     return self.iterator
 
+class NullAdapter(Adapter):
+  def has(self, relation):
+    if relation == '':
+      return True
 
+  def table_scan(self, name, ctx):
+    return NullRelation()
+
+
+# TODO: deprecate this
 class NullRelation(object):
   """Relation used for queries that don't involve tables"""
   schema = Schema(name="", fields=[])
