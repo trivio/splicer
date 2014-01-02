@@ -5,36 +5,67 @@ from itertools import islice
 from ..ast import *
 from ..aggregate import Aggregate
 from ..relation import Relation
-from ..operations import replace_views
+from ..operations import view_replacer, walk
 from ..schema_interpreter import (
-  field_from_expr, schema_from_projection_op, schema_from_join_op,
-  schema_from_projection_schema
+  field_from_expr, schema_from_projection_op, 
+  schema_from_projection_schema, JoinSchema
 )
 
 
 def compile(query):
+  return walk(
+    query.operations, 
+    visit_with(
+      query.dataset,
+      (isa(LoadOp), view_replacer),
+      (isa(LoadOp), load_relation),
+      (is_group_by, group_by_op),
+      (isa_op, relational_op),
+    )
+  )
 
-  operations = replace_views(query.operations, query.dataset)
 
-  plan = relational_op(operations, query.dataset)
+def isa(type):
+  def test(loc):
+    return isinstance(loc.node(), type)
+  return test
 
-  def evaluate(ctx, *params):
-    return plan(ctx)
+def visit_with(dataset, *visitors):
+  def visitor(loc):
+    for test,f in visitors:
+      if test(loc):
+        loc = f(dataset, loc, loc.node())
+    return loc
+  return visitor
 
-  return evaluate
+def is_group_by(loc):
 
+  # GroupByOp child op is always a ProjectionOp. Since
+  # we do a depth first walk, look for a projection op
+  # who's parent is a GroupByOp
+  if isinstance(loc.node(), ProjectionOp):
+    u = loc.up()
+    return u and isinstance(u.node(), GroupByOp)
+  else:
+    return False
 
+def isa_op(loc):
+  return type(loc.node()) in RELATION_OPS
 
-def load_op(operation, dataset):
+def relational_op(dataset, loc, operation):
+  return loc.replace(RELATION_OPS[type(operation)](dataset,  operation))
+
+def load_relation(dataset, loc, operation):  
   def load(ctx):
     return dataset.get_relation(operation.name)
-  return load
+  return loc.replace(load)
 
-def alias_op(operation, dataset):
-  load = relational_op(operation.relation, dataset)
 
+
+
+def alias_op(dataset, operation):
   def alias(ctx):
-    relation = load(ctx)
+    relation = operation.relation(ctx)
     return Relation(
       relation.schema.new(name=operation.name),
       iter(relation)
@@ -42,14 +73,12 @@ def alias_op(operation, dataset):
 
   return alias
 
-def relational_op(operation, dataset):
-  return RELATION_OPS[type(operation)](operation, dataset)
 
-def projection_op(operation, dataset):
-  load = relational_op(operation.relation, dataset)
+
+def projection_op(dataset, operation):
 
   def projection(ctx):
-    relation = load(ctx)
+    relation = operation.relation(ctx)
     columns = tuple([
       column
       for group in [
@@ -74,15 +103,14 @@ def projection_op(operation, dataset):
 
 
 
-def selection_op(operation, dataset):
-  load = relational_op(operation.relation, dataset)
+def selection_op(dataset, operation):
 
   if operation.bool_op is None:
     return lambda relation, ctx: relation
 
 
   def selection(ctx):
-    relation = load(ctx)
+    relation = operation.relation(ctx)
     predicate  = value_expr(operation.bool_op, relation, dataset)
     return Relation(
       relation.schema,
@@ -94,15 +122,14 @@ def selection_op(operation, dataset):
     )
   return selection
 
-def join_op(operation, dataset):
-  right_op = relational_op(operation.right, dataset)
-  left_op = relational_op(operation.left, dataset)
-
+def join_op(dataset, operation):
+  
   def join(ctx):
-    left = left_op(ctx)
-    right = right_op(ctx)
+    left = operation.left(ctx)
+    right = operation.right(ctx)
 
-    schema = schema_from_join_op(operation, dataset)
+
+    schema = JoinSchema(left.schema, right.schema) 
 
     # seems silly to have to build a fake relation
     # just so var_expr (which is reached by value_expr)
@@ -122,7 +149,7 @@ def join_op(operation, dataset):
 
     return Relation(
       schema,
-      method(left_op, right_op, comparison, ctx)
+      method(operation.left, operation.right, comparison, ctx)
     )
 
 
@@ -130,10 +157,10 @@ def join_op(operation, dataset):
 
 
 
-def order_by_op(operation, dataset):
-  load = relational_op(operation.relation, dataset)
+def order_by_op(dataset, operation):
+
   def order_by(ctx):
-    relation = load(ctx)
+    relation = operation.relation(ctx)
 
     columns = tuple(
       value_expr(expr, relation, dataset)
@@ -149,15 +176,26 @@ def order_by_op(operation, dataset):
     )
   return order_by
 
-def group_by_op(operation, dataset):
-  if operation.exprs:
-    load   = order_by_op(operation, dataset)
+def group_by_op(dataset, loc, operation):
+  # The parser does not have access to the dataset
+  # at parse time so it creates the Expression Tree as
+  # GroupBy(ProjectionOp, group1, group2, ...groupX)
+  # GroupByOps are visited before ProjectionOp's so
+  # that we can resolve the aggregate functions
+
+  group_loc = loc.up()
+
+  group_op = group_loc.node()
+
+  if group_op.exprs:
+    # compile the projection_op
+    group_op = group_op.new(relation=projection_op(dataset, operation))
+    load   = order_by_op(dataset, group_op)
   else:
-    load = relational_op(operation.relation, dataset)
+    load = projection_op(dataset, operation)
 
 
-  exprs      = operation.relation.exprs
-
+  exprs      = operation.exprs
   aggs       = aggregates(exprs, dataset)
 
   initialize = initialize_op(aggs)
@@ -167,8 +205,8 @@ def group_by_op(operation, dataset):
 
   def group_by(ctx):
     ordered_relation = load(ctx)
-    if operation.exprs:
-      key = key_op(operation.exprs, ordered_relation.schema)
+    if group_op.exprs:
+      key = key_op(group_op.exprs, ordered_relation.schema)
     else:
       # it's all aggregates with no group by elements
       # so no need to order the table
@@ -198,21 +236,25 @@ def group_by_op(operation, dataset):
       schema,
       group()
     )
-  return group_by
+
+  # note that this method was triggered on ProjectionOp but we're returning the
+  # location of the GroupByOp replaced with the group_by function
+  # which will prevent the ProjectionOp from being inspected 
+  # further.
+  return group_loc.replace(group_by)
 
 
 
-def slice_op(expr, dataset):
-  load = relational_op(expr.relation, dataset)
+def slice_op(dataset, expr):
   def limit(ctx):
-    relation = load(ctx)
+    relation = expr.relation(ctx)
     return Relation(
       relation.schema,
       islice(relation, expr.start, expr.stop)
     )
   return limit
 
-def relational_function(op, dataset):
+def relational_function(dataset, op):
   """Invokes a function that operates on a whole relation"""
   function = dataset.get_function(op.name)
 
@@ -220,8 +262,8 @@ def relational_function(op, dataset):
   for arg_expr in op.args:
     if isinstance(arg_expr, Const):
       args.append(lambda ctx: arg_expr.const)
-    elif isinstance(arg_expr, RelationalOp):
-      args.append(relational_op(arg_expr, dataset))
+    elif callable(arg_expr):
+      args.append(arg_expr)
     else:
       raise ValueError(
         "Only Relational Operations and constants "
@@ -451,14 +493,13 @@ VALUE_EXPR = {
 
 RELATION_OPS = {
   AliasOp: alias_op,
-  LoadOp: load_op,
   ProjectionOp: projection_op,
   SelectionOp: selection_op,
   OrderByOp: order_by_op,
   GroupByOp: group_by_op,
   SliceOp: slice_op,
   JoinOp: join_op,
-  Function: relational_function
+  Function: relational_function,
   
 }
 

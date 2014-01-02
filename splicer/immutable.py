@@ -22,7 +22,7 @@ class ImmutableMixin(object):
 
   def new(self, **parts):
     """
-    Returns a copy of the existing object with the specidied attrs
+    Returns a copy of the existing object with the specified attrs
     overwritten.
     """
     attrs = {attr:getattr(self, attr) for attr in self.__slots__}
