@@ -3,7 +3,8 @@ from __future__ import absolute_import
 import csv
 from itertools import chain
 
-from .. import Schema, Relation
+from ..schema import Schema
+from ..relation import Relation
 from . import decodes
 
 

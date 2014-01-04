@@ -1,5 +1,5 @@
 import mimetypes
-from .. import Schema
+from ..schema import Schema
 
 decoders_by_mime_type = {}
 
