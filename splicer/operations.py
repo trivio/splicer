@@ -20,7 +20,7 @@ def children(operation):
     return tuple(
       arg 
       for arg in operation.args 
-      if isinstance(arg, RelationalOp)
+      if isinstance(arg, RelationalOp) or isinstance(arg, Function)
     )
   else:
     return (operation.relation,)
@@ -33,7 +33,7 @@ def make_node(operation, children):
     pos = 0
     args = []
     for arg in operation.args:
-      if isinstance(arg, RelationalOp):
+      if isinstance(arg, RelationalOp) or isinstance(arg, Function):
         args.append(children[pos])
         pos += 1
       else:
