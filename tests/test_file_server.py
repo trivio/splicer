@@ -21,95 +21,32 @@ def teardown_func():
     path =None
 
 
+from splicer.ast import *
+from splicer.operations import query_zipper
+from splicer.compilers.local import compile
 @with_setup(setup_func, teardown_func)
-def test_file_server_with_schemas():
-  for artists in range(3):
-    for album in range(3):
-      album_path = os.path.join(
-        path,
-        'artist{}/album{}/'.format(artists, album)
-      )
-      os.makedirs(album_path)
-
-      for track in range(4):
-        open(os.path.join(album_path,"{}.ogg".format(track)), 'w')
-
+def test_evaluate():
   
-  server = FileServer(
+  adapter = FileServer(
     songs = dict(
       root_dir = path,
       pattern = "{artist}/{album}/{track}.{ext}",
-      content_column="content",
+      filename_column="path",
     )
   )
+  relation = adapter.get_relation('songs')
 
-
-  songs = server.get_relation('songs')
-  assert_sequence_equal(
-    songs.schema.fields,
-    [
-      Field(name="artist", type="STRING"),
-      Field(name="album", type="STRING"),
-      Field(name="track", type="STRING"),
-      Field(name="ext", type="STRING"),
-      Field(name="content", type="BINARY")
-    ]
-  )
-
-  assert_sequence_equal(
-    sorted(songs),
-    [
-      ("artist{}".format(artist), 'album{}'.format(album), str(track), 'ogg', '')
-      for artist in range(3)
-      for album in range(3)
-      for track in range(4)
-    ]
-  )
-
-@with_setup(setup_func, teardown_func)
-def test_file_server_with_deserializing():
-  os.makedirs(os.path.join(path, 'alternative'))
-  open(
-    os.path.join(path, "alternative/data.csv"),
-    'w'
-  ).write(
-    "artist,album,track_number,track_name\n"
-    'Nirvana,nevermind,1,"Smells Like Teen Spirit"\n'
-    'They Might Be Giants,Flood,7,Partical Man\n'
-  )
+  op = LoadOp('songs')
+  loc = query_zipper(op).leftmost_descendant()
   
-  # files that don't match the pattern should be ignored
-  open(
-    os.path.join(path, "alternative/random.ogg"),
-    'w'
-  ).write('')
+  res = adapter.evaluate(loc)
 
-
-  server = FileServer(
-    songs = dict(
-      root_dir = path,
-      pattern = "{genre}/data.csv",
-      decode="text/csv"
+  eq_(
+    res.root(),
+    Function(
+      'extract_path',
+      Function('files', Const(relation.root_dir)),
+      Const(path + "/{artist}/{album}/{track}.{ext}")
     )
   )
 
-  songs = server.get_relation('songs')
-
-  assert_sequence_equal(
-    songs.schema.fields,
-    [
-      Field(name="genre", type="STRING"),
-      Field(name="artist", type="STRING"),
-      Field(name="album", type="STRING"),
-      Field(name="track_number", type="STRING"),
-      Field(name="track_name", type="STRING")
-    ]
-  )
-
-  assert_sequence_equal(
-    list(songs),
-    [
-      ('alternative', 'Nirvana', 'nevermind', '1', 'Smells Like Teen Spirit'),
-      ('alternative', 'They Might Be Giants', 'Flood', '7', 'Partical Man')
-    ]  
-  )
