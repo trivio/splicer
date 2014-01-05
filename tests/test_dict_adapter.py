@@ -2,7 +2,7 @@ from datetime import date
 from nose.tools import *
 
 from splicer import Query, Schema, Field
-from splicer.servers.dict_server import DictServer
+from splicer.adapters.dict_adapter import DictAdapter
 
 
 employee_records = [
@@ -25,8 +25,8 @@ employee_records = [
   )
 ]
 
-def test_dict_server_with_schemas():
-  server = DictServer(
+def test_dict_adapter_with_schemas():
+  adapter = DictAdapter(
     employees = dict(
       schema = dict(
         fields=[
@@ -40,7 +40,7 @@ def test_dict_server_with_schemas():
     )
   )
 
-  employees = server.get_relation('employees')
+  employees = adapter.get_relation('employees')
 
   assert_sequence_equal(
     employees.schema.fields,

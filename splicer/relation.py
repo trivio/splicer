@@ -1,5 +1,5 @@
 from .schema import Schema
-from .servers import Adapter
+from .adapters import Adapter
 
 class Relation(object):
   def __init__(self, schema, iterator):

@@ -1,8 +1,8 @@
 from splicer import Schema, Field
-from splicer.servers import Adapter
+from splicer.adapters import Adapter
 from splicer.ast import Function, Const
 
-class FileServer(Adapter):
+class DirAdapter(Adapter):
   def __init__(self, **relations):
     self._relations = {
       name:FileTable(name, **args) for name,args in relations.items()

@@ -1,9 +1,9 @@
 from splicer import Table
 from . import Adapter
 
-class DictServer(Adapter):
+class DictAdapter(Adapter):
   """
-  A server for working with lists of dictionaries.
+  An adapter for working with lists of dictionaries.
   """
   def __init__(self, **tables):
     """
@@ -56,8 +56,8 @@ class DictServer(Adapter):
 
 
 class DictTable(Table):
-  def __init__(self, server, name, schema, rows):
-    super(self.__class__, self).__init__(server, name, schema)
+  def __init__(self, adapter, name, schema, rows):
+    super(self.__class__, self).__init__(adapter, name, schema)
     self.key_index = [
       (f.name, () if f.mode == 'REPEATED' else None)
       for f in self.schema.fields

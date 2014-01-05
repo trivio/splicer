@@ -31,17 +31,17 @@ class DataSet(object):
 
 
 
-  def add_server(self, server):
+  def add_adapter(self, adapter):
     """
-    Add the given server to the dataset.
+    Add the given adapter to the dataset.
 
     Multiple adds for the instance of the same
-    relation are ignored.
+    adapter are ignored.
 
     """
 
-    if server not in self.adapters:
-      self.adapters.append(server)
+    if adapter not in self.adapters:
+      self.adapters.append(adapter)
 
   def create_view(self, name, query_or_operations):
     if isinstance(query_or_operations, basestring):
@@ -117,15 +117,15 @@ class DataSet(object):
   @property
   def relations(self):
     """
-    Returns a list of all relations from all servers
+    Returns a list of all relations from all adapters
     note this could be a slow operation as remote
-    calls must be made to each server. 
+    calls must be made to each adapter. 
 
     As a side effect the relation_cache will be updated.
     """
 
-    for server in self.adapters:
-      for name, schema in server.relations:
+    for adapter in self.adapters:
+      for name, schema in adapter.relations:
         self.relation_cache[name] = schema
     return [item for item in self.relation_cache.items() if item[0] != '']
 
@@ -139,14 +139,14 @@ class DataSet(object):
   def get_relation(self, name):
     """Returns the relation for the given name.
 
-    The dataset will search all servers in the order the
-    servers were added to the dataset returning the first 
+    The dataset will search all adapters in the order the
+    adapters were added to the dataset returning the first 
     relation with the given name.
     """
     relation = self.relation_cache.get(name)
     if relation is None:
-      for server in self.adapters:
-        relation = server.get_relation(name)
+      for adapter in self.adapters:
+        relation = adapter.get_relation(name)
         if relation:
           self.relation_cache[name] = relation
           break

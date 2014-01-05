@@ -1,4 +1,4 @@
-from splicer.servers.dict_server import DictServer
+from splicer.adapters.dict_adapter import DictAdapter
 from datetime import date
 
 employee_records = [
@@ -22,7 +22,7 @@ employee_records = [
   )
 ]
 
-class EmployeeServer(DictServer):
+class EmployeeAdapter(DictAdapter):
   def __init__(self):
     super(self.__class__, self).__init__(
       employees = dict(

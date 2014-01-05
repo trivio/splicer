@@ -6,12 +6,12 @@ from splicer import DataSet, Query
 from splicer.ast import *
 from splicer.compilers.local import compile
 
-from .fixtures.employee_server import EmployeeServer
+from .fixtures.employee_adapter import EmployeeAdapter
   
 
 def test_projection():
   dataset = DataSet()
-  dataset.add_server(EmployeeServer())
+  dataset.add_adapter(EmployeeAdapter())
 
   q = Query(
     dataset,  
@@ -26,7 +26,7 @@ def test_projection():
 
 def test_projection_wo_relation():
   """
-  This is equivalent to select statements w/o from clauses in sql servers.
+  This is equivalent to select statements w/o from clauses in sql adapters.
   select 1;
 
   | col1 |
@@ -53,7 +53,7 @@ def test_projection_wo_relation():
 
 def test_selection():
   dataset = DataSet()
-  dataset.add_server(EmployeeServer())
+  dataset.add_adapter(EmployeeAdapter())
 
   q = Query(
     dataset,
@@ -94,7 +94,7 @@ def test_selection():
 
 def test_addition():
   dataset = DataSet()
-  dataset.add_server(EmployeeServer())
+  dataset.add_adapter(EmployeeAdapter())
 
 
   q = Query(
@@ -110,7 +110,7 @@ def test_addition():
 
 def test_order_by():
   dataset = DataSet()
-  dataset.add_server(EmployeeServer())
+  dataset.add_adapter(EmployeeAdapter())
 
 
   q = Query(
@@ -130,7 +130,7 @@ def test_order_by():
 
 def test_order_by_asc():
   dataset = DataSet()
-  dataset.add_server(EmployeeServer())
+  dataset.add_adapter(EmployeeAdapter())
 
 
   q = Query(
@@ -150,7 +150,7 @@ def test_order_by_asc():
 
 def test_function_calls():
   dataset = DataSet()
-  dataset.add_server(EmployeeServer())
+  dataset.add_adapter(EmployeeAdapter())
 
   dataset.add_function(
     name = 'initials', 
@@ -177,7 +177,7 @@ def test_function_calls():
 
 def test_decorator_function_calls():
   dataset = DataSet()
-  dataset.add_server(EmployeeServer())
+  dataset.add_adapter(EmployeeAdapter())
 
   @dataset.function(returns=dict(name="initials", type="STRING"))
   def initials(name):
@@ -205,7 +205,7 @@ def test_decorator_function_calls():
 
 def test_aggregation_whole_table():
   dataset = DataSet()
-  dataset.add_server(EmployeeServer())
+  dataset.add_adapter(EmployeeAdapter())
 
   q = Query(
     dataset,  
@@ -223,7 +223,7 @@ def test_aggregation_whole_table():
 
 def test_aggregation_on_column():
   dataset = DataSet()
-  dataset.add_server(EmployeeServer())
+  dataset.add_adapter(EmployeeAdapter())
 
   q = Query(
     dataset, 
@@ -245,7 +245,7 @@ def test_aggregation_on_column():
 
 def test_limit():
   dataset = DataSet()
-  dataset.add_server(EmployeeServer())
+  dataset.add_adapter(EmployeeAdapter())
 
   q = Query(
     dataset, 
@@ -262,7 +262,7 @@ def test_limit():
 
 def test_offset():
   dataset = DataSet()
-  dataset.add_server(EmployeeServer())
+  dataset.add_adapter(EmployeeAdapter())
 
   q = Query(
     dataset, 
@@ -281,7 +281,7 @@ def test_offset():
 
 def test_offset_and_limit():
   dataset = DataSet()
-  dataset.add_server(EmployeeServer())
+  dataset.add_adapter(EmployeeAdapter())
 
   q = Query(
     dataset, 
@@ -299,7 +299,7 @@ def test_offset_and_limit():
 
 def test_cross_join():
   dataset = DataSet()
-  dataset.add_server(EmployeeServer())
+  dataset.add_adapter(EmployeeAdapter())
 
   q = Query(
     dataset, 
@@ -313,7 +313,7 @@ def test_cross_join():
 
 def test_self_join():
   dataset = DataSet()
-  dataset.add_server(EmployeeServer())
+  dataset.add_adapter(EmployeeAdapter())
 
 
   q = Query(
@@ -338,7 +338,7 @@ def test_self_join():
 
 def test_self_join_with_projection():
   dataset = DataSet()
-  dataset.add_server(EmployeeServer())
+  dataset.add_adapter(EmployeeAdapter())
 
   q = Query(
     dataset,  
@@ -368,7 +368,7 @@ def test_self_join_with_projection():
 
 def test_function_in_from():
   dataset = DataSet()
-  dataset.add_server(EmployeeServer())
+  dataset.add_adapter(EmployeeAdapter())
 
   q = Query(
     dataset,  

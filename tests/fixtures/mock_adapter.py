@@ -1,11 +1,11 @@
 from splicer import Table
-from splicer.servers import Adapter
+from splicer.adapters import Adapter
 
-class MockServer(Adapter):
+class MockAdapter(Adapter):
   def __init__(self):
     
     table = Table(
-      server = self,
+      adapter = self,
       name = 'bogus',
       schema = dict(
         fields = [

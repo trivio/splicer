@@ -2,7 +2,7 @@ from datetime import date
 from nose.tools import *
 
 from splicer import Query, Schema, Field
-from splicer.servers.file_server import FileServer
+from splicer.adapters.dir_adapter import DirAdapter
 
 import os
 import tempfile
@@ -27,7 +27,7 @@ from splicer.compilers.local import compile
 @with_setup(setup_func, teardown_func)
 def test_evaluate():
   
-  adapter = FileServer(
+  adapter = DirAdapter(
     songs = dict(
       root_dir = path,
       pattern = "{artist}/{album}/{track}.{ext}",

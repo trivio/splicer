@@ -5,7 +5,7 @@ from splicer import DataSet, Relation, Schema
 from splicer.operations import walk, replace_views
 from splicer.ast import *
 
-from .fixtures.employee_server import EmployeeServer
+from .fixtures.employee_adapter import EmployeeAdapter
 
 
 def test_walk():
@@ -18,7 +18,7 @@ def test_walk():
 
 def test_relpace_views():
   dataset = DataSet()
-  dataset.add_server(EmployeeServer())
+  dataset.add_adapter(EmployeeAdapter())
 
   no_managers = SelectionOp(
     LoadOp('employees'),

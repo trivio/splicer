@@ -5,17 +5,17 @@ from splicer.query_builder import QueryBuilder
 
 from splicer.ast import LoadOp, ProjectionOp, Var
 
-from .fixtures.mock_server import MockServer
+from .fixtures.mock_adapter import MockAdapter
 
 
 
 def test_get_relation():
   dataset = DataSet()
 
-  server = MockServer()
-  dataset.add_server(server)
+  adapter = MockAdapter()
+  dataset.add_adapter(adapter)
 
-  s_table = server.get_relation('bogus')
+  s_table = adapter.get_relation('bogus')
 
   table = dataset.get_relation('bogus')
   eq_(table, s_table)
@@ -27,8 +27,8 @@ def test_get_relation():
 
 def test_query_builder():
   dataset = DataSet()
-  server = MockServer()
-  dataset.add_server(server)
+  adapter = MockAdapter()
+  dataset.add_adapter(adapter)
   query = dataset.select('x')
 
   eq_(isinstance(query, QueryBuilder), True)
@@ -36,11 +36,11 @@ def test_query_builder():
   eq_(query.column_exps, 'x')
 
 def test_complier():
-  server = MockServer()
+  adapter = MockAdapter()
 
   def compile(query):
     return lambda ctx, *params: Table(
-      server,
+      adapter,
       'results!', 
       schema = dict(
         fields = [
@@ -51,7 +51,7 @@ def test_complier():
 
 
   dataset = DataSet()
-  dataset.add_server(server)
+  dataset.add_adapter(adapter)
   dataset.set_compiler(compile)
 
   query = dataset.frm('bogus').query
@@ -65,7 +65,7 @@ def test_query():
 
 def test_views():
   dataset = DataSet()
-  dataset.add_server(MockServer())
+  dataset.add_adapter(MockAdapter())
 
 
   # create a view off of an existing table
