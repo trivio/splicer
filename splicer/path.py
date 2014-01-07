@@ -27,10 +27,13 @@ def regex_str(tokens):
       r.append(re.escape(t))
   return ''.join(r)
 
+def columns(tokens):
+  return [t[1:-1] for t in tokens if t.startswith('{')]
+
 def pattern_regex(pattern_str):
   tokens = list(tokenize_pattern(pattern_str))
   
   return (
     re.compile(regex_str(tokens)),  # regex
-    [t[1:-1] for t in tokens if t.startswith('{')] # tokennames
+    columns(tokens) # tokennames
   )

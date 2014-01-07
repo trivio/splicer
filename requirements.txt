@@ -1,5 +1,5 @@
 nose
 coverage
 codd
-zipper
+zipper >= 0.0.3
 -e .

@@ -5,7 +5,7 @@ from itertools import chain
 from ..relation import Relation
 from ..schema import Schema
 from .. import codecs
-from splicer.path import pattern_regex
+from splicer.path import pattern_regex, regex_str
 
 
 def init(dataset):
