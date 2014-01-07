@@ -209,7 +209,7 @@ def test_aggregation_whole_table():
 
   q = Query(
     dataset,  
-    GroupByOp(ProjectionOp(LoadOp('employees'), Function('count')))
+    ProjectionOp(LoadOp('employees'), Function('count'))
   )
   evaluate = compile(q)
 

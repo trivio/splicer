@@ -3,7 +3,7 @@ from functools import partial
 from itertools import islice
 
 from ..ast import *
-from ..aggregate import Aggregate
+
 from ..relation import Relation
 from ..operations import view_replacer, walk
 from ..schema_interpreter import (
@@ -19,7 +19,7 @@ def compile(query):
       query.dataset,
       (isa(LoadOp), view_replacer),
       (isa(LoadOp), load_relation),
-      (is_group_by, group_by_op),
+      (isa(ProjectionOp), projection_op),
       (isa_op, relational_op),
     )
   )
@@ -38,16 +38,6 @@ def visit_with(dataset, *visitors):
     return loc
   return visitor
 
-def is_group_by(loc):
-
-  # GroupByOp child op is always a ProjectionOp. Since
-  # we do a depth first walk, look for a projection op
-  # who's parent is a GroupByOp
-  if isinstance(loc.node(), ProjectionOp):
-    u = loc.up()
-    return u and isinstance(u.node(), GroupByOp)
-  else:
-    return False
 
 def isa_op(loc):
   return type(loc.node()) in RELATION_OPS
@@ -71,7 +61,22 @@ def alias_op(dataset, operation):
 
 
 
-def projection_op(dataset, operation):
+def projection_op(dataset, loc, operation):
+
+  aggs = aggregates(operation.exprs, dataset)
+  if aggs:
+    # we have an aggregate operations, push them up to the group by
+    # operation or add a group by operation if all projection expresions
+    # are aggregates
+    u = loc.up()
+    parent_op = u and u.node()
+    if not isinstance(parent_op, GroupByOp):
+      if len(aggs) != len(operation.exprs):
+        raise group_by_error(operation.expresions, aggs)
+      loc = loc.replace(GroupByOp(operation, aggregates=aggs)).down()
+    else:
+      loc = u.replace(parent_op.new(aggregates=aggs)).down()
+
 
   def projection(ctx):
     relation = operation.relation(ctx)
@@ -95,7 +100,7 @@ def projection_op(dataset, operation):
       )
     )
 
-  return projection
+  return loc.replace(projection)
 
 
 
@@ -172,27 +177,18 @@ def order_by_op(dataset, operation):
     )
   return order_by
 
-def group_by_op(dataset, loc, operation):
-  # The parser does not have access to the dataset
-  # at parse time so it creates the Expression Tree as
-  # GroupBy(ProjectionOp, group1, group2, ...groupX)
-  # GroupByOps are visited before ProjectionOp's so
-  # that we can resolve the aggregate functions
+def group_by_op(dataset, group_op):
 
-  group_loc = loc.up()
-
-  group_op = group_loc.node()
 
   if group_op.exprs:
-    # compile the projection_op
-    group_op = group_op.new(relation=projection_op(dataset, operation))
     load   = order_by_op(dataset, group_op)
   else:
-    load = projection_op(dataset, operation)
+    # we're aggregating the whole table
+    load = group_op.relation 
 
 
-  exprs      = operation.exprs
-  aggs       = aggregates(exprs, dataset)
+  exprs      = group_op.exprs
+  aggs       = group_op.aggregates
 
   initialize = initialize_op(aggs)
   accumalate = accumulate_op(aggs)
@@ -237,8 +233,7 @@ def group_by_op(dataset, loc, operation):
   # location of the GroupByOp replaced with the group_by function
   # which will prevent the ProjectionOp from being inspected 
   # further.
-  return group_loc.replace(group_by)
-
+  return group_by
 
 
 def slice_op(dataset, expr):
@@ -282,6 +277,24 @@ def aggregate_expr(expr, dataset):
     expr = expr.expr
 
   return dataset.aggregates[expr.name]
+
+def group_by_error(exprs, aggs):
+  """Used to raise an error highlighting the first
+  offending column when a projection operation has a mix of
+  aggregate expresions and non-aggregate expresions but no 
+  group by.
+
+  """
+
+  agg_expr = dict(aggs)
+  for col, expr in enumerate(exprs):
+    if col not in aggs:
+      return SyntaxError(
+        (
+          '"{}" must appear in the GROUP BY clause '
+          'or be used in an aggregate function'
+        ).format(expr)
+      )
 
 
 def key_op(exprs, schema):

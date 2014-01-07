@@ -265,10 +265,16 @@ class OrderByOp(RelationalOp):
 
 
 class GroupByOp(RelationalOp):
-  __slots__ = ('exprs','relation')
-  def __init__(self, relation, *exprs):
-    self.relation = relation
-    self.exprs =  exprs
+  __slots__ = ('relation','aggregates','exprs',)
+  def __init__(self, relation,  *exprs, **kw):
+    self.relation   = relation
+    self.exprs      = exprs
+
+    # bit of a kludge, aggregates can't be resolved at
+    # parse time, so they start as an empty list and
+    # are set when the expression tree is evaluated.
+    # See compilers.local.projection_op for details
+    self.aggregates = kw.get('aggregates', ())
 
 class SliceOp(RelationalOp):
   __slots__ = ('relation','start','stop')
