@@ -10,7 +10,7 @@ from . import decodes
 
 @decodes('text/csv')
 def csv_decoder(stream):
-  sample = stream.read(2 * 1024 ** 2 )
+  sample = stream.read(1024 ** 2)
   stream.seek(0)
   sniffer = csv.Sniffer()
 
