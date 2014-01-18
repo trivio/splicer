@@ -113,6 +113,7 @@ def selection_op(dataset, operation):
   def selection(ctx):
     relation = operation.relation(ctx)
     predicate  = value_expr(operation.bool_op, relation, dataset)
+
     return Relation(
       relation.schema,
       (
@@ -252,7 +253,7 @@ def relational_function(dataset, op):
   args = []
   for arg_expr in op.args:
     if isinstance(arg_expr, Const):
-      args.append(lambda ctx: arg_expr.const)
+      args.append(lambda ctx, const=arg_expr.const: const)
     elif callable(arg_expr):
       args.append(arg_expr)
     else:
@@ -360,6 +361,7 @@ def column_expr(expr, relation, dataset):
     return (value_expr(expr,relation,dataset),)
 
 def select_all_expr(expr, relation, dataset):
+
   schema = relation.schema
   if expr.table is None:
     fields = schema.fields
