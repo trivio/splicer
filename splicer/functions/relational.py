@@ -12,7 +12,6 @@ def init(dataset):
 def flatten(relation, path):
 
   schema = relation.schema
-
   field = schema[path]
 
 
@@ -38,13 +37,14 @@ def flatten(relation, path):
       yield new_row
 
   def flatten_repeated_record(row):
+    col = row[field_pos]
+    if col:
+      for value in row[field_pos]:
+        new_row = list(row)
+        values = [value.get(f.name) for f in field.fields]
 
-    for value in row[field_pos]:
-      new_row = list(row)
-      values = [value.get(f.name) for f in field.fields]
-
-      new_row[field_pos:field_pos+1] = values
-      yield new_row
+        new_row[field_pos:field_pos+1] = values
+        yield new_row
 
 
   if field.type == 'RECORD':
