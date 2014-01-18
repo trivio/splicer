@@ -4,10 +4,8 @@ import shutil
 
 from nose.tools import *
 
-
 from splicer.ast import *
 from splicer.operations import query_zipper
-from splicer.compilers.local import compile
 from splicer.adapters.dir_adapter import DirAdapter
 
 
