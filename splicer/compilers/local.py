@@ -4,7 +4,6 @@ from itertools import islice
 
 from ..ast import *
 
-from ..relation import Relation
 from ..operations import  walk, visit_with, isa
 from ..schema_interpreter import (
   field_from_expr,  JoinSchema,
@@ -54,10 +53,7 @@ def validate_function(dataset, loc, function):
 def alias_op(dataset, operation):
   def alias(ctx):
     relation = operation.relation(ctx)
-    return Relation(
-      relation.schema.new(name=operation.name),
-      iter(relation)
-    )
+    return relation
 
   return alias
 
@@ -95,14 +91,11 @@ def projection_op(dataset,  operation):
   def projection(ctx):
     relation = operation.relation(ctx)
  
-    return Relation(
-      schema,
-      (
-        tuple( col(row, ctx) for col in columns )
-        for row in relation
-      )
+    return (
+      tuple( col(row, ctx) for col in columns )
+      for row in relation
     )
-
+    
   return projection
 
 
@@ -117,14 +110,12 @@ def selection_op(dataset, operation):
   def selection(ctx):
     relation = operation.relation(ctx)
 
-    return Relation(
-      relation.schema,
-      (
-        row
-        for row in relation
-        if predicate(row, ctx)
-      )
+    return (
+      row
+      for row in relation
+      if predicate(row, ctx)
     )
+    
   return selection
 
 def join_op(dataset, operation):
@@ -145,12 +136,8 @@ def join_op(dataset, operation):
     right = operation.right(ctx)
 
 
-    return Relation(
-      schema,
-      method(operation.left, operation.right, comparison, ctx)
-    )
-
-
+    return method(operation.left, operation.right, comparison, ctx)
+    
   return join
 
 
@@ -168,10 +155,8 @@ def order_by_op(dataset, operation):
     def key(row):
       return tuple(c(row, ctx) for c in columns)
 
-    return Relation(
-      schema, 
-      iter(sorted(relation, key=key))
-    )
+    return sorted(relation, key=key)
+    
   return order_by
 
 def group_by_op(dataset, group_op):
@@ -191,17 +176,16 @@ def group_by_op(dataset, group_op):
   accumalate = accumulate_op(aggs)
   finalize   = finalize_op(aggs)
 
+  if group_op.exprs:
+    key = key_op(group_op.exprs, load.schema)
+  else:
+    # it's all aggregates with no group by elements
+    # so no need to order the table
+    key = lambda row,ctx: None
+
 
   def group_by(ctx):
     ordered_relation = load(ctx)
-    if group_op.exprs:
-      key = key_op(group_op.exprs, ordered_relation.schema)
-    else:
-      # it's all aggregates with no group by elements
-      # so no need to order the table
-      key = lambda row,ctx: None
-
-    schema = ordered_relation.schema
 
     def group():
       records = iter(ordered_relation)
@@ -221,22 +205,16 @@ def group_by_op(dataset, group_op):
 
       yield finalize(record)
 
-    return Relation(
-      schema,
-      group()
-    )
-
-
+    return group()
+    
   return group_by
 
 
 def slice_op(dataset, expr):
   def limit(ctx):
     relation = expr.relation(ctx)
-    return Relation(
-      relation.schema,
-      islice(relation, expr.start, expr.stop)
-    )
+    return islice(relation, expr.start, expr.stop)
+    
   return limit
 
 def relational_function(dataset, op):
