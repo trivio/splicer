@@ -14,24 +14,28 @@ from splicer.compilers.join import (
 from splicer.ast import EqOp, And, Var, NumberConst
 
 
+SCHEMA_1 = Schema(name="t1", fields=[dict(name='x', type="INTEGER")])
+
 def t1(ctx=None):
   return Relation(
-    Schema(name="t1", fields=[dict(name='x', type="INTEGER")]),
+    SCHEMA_1,
     iter((
       (1,),
       (2,)
     ))
   )
 
+SCHEMA_2 = Schema(
+  name="t2", 
+  fields=[
+    dict(name='y', type="INTEGER"),
+    dict(name='z', type="INTEGER")
+  ]
+)
+
 def t2(ctx=None): 
   return Relation(
-    Schema(
-      name="t2", 
-      fields=[
-        dict(name='y', type="INTEGER"),
-        dict(name='z', type="INTEGER")
-      ]
-    ),
+    SCHEMA_2,
     iter((
       (1,0),
       (1,1),
@@ -107,7 +111,7 @@ def test_nested_block_join():
 def test_join_key_expr():
 
   simple_op = EqOp(Var('t1.x'), Var('t2.y'))
-  ((left_key, right_key),) = join_keys_expr(t1(),t2(), simple_op)
+  ((left_key, right_key),) = join_keys_expr(SCHEMA_1, SCHEMA_2, simple_op)
 
   ctx = None
   eq_(
@@ -121,7 +125,7 @@ def test_join_key_expr():
   )
 
   simple_op = EqOp(Var('t2.y'), Var('t1.x'))
-  ((left_key, right_key),) = join_keys_expr(t1(),t2(), simple_op)
+  ((left_key, right_key),) = join_keys_expr(SCHEMA_1,SCHEMA_2, simple_op)
 
   ctx = None
   eq_(
@@ -135,7 +139,7 @@ def test_join_key_expr():
   )
 
   simple_op = EqOp(Var('t1.x'), NumberConst(1))
-  assert_raises(ValueError, join_keys_expr,t1(),t2(), simple_op)
+  assert_raises(ValueError, join_keys_expr,SCHEMA_1,SCHEMA_2, simple_op)
 
 
 
@@ -143,7 +147,7 @@ def test_join_keys():
   
   simple_op = EqOp(Var('t1.x'), Var('t2.y'))
 
-  left_key, right_key = join_keys(t1(),t2(), simple_op)
+  left_key, right_key = join_keys(SCHEMA_1,SCHEMA_2, simple_op)
 
   ctx = None
   eq_(
@@ -161,7 +165,7 @@ def test_join_keys():
     EqOp(Var('t1.x'), Var('t2.z')),
   )
 
-  left_key, right_key = join_keys(t1(),t2(), multi_key)
+  left_key, right_key = join_keys(SCHEMA_1,SCHEMA_2, multi_key)
 
   eq_(
     left_key((1,), ctx),
@@ -178,7 +182,7 @@ def test_hash_join():
   simple_op = EqOp(Var('t1.x'), Var('t2.y'))
   ctx = {}
 
-  comparison = join_keys(t1(),t2(), simple_op)
+  comparison = join_keys(SCHEMA_1,SCHEMA_2, simple_op)
   j = tuple(hash_join(t1,t2, comparison, ctx))
 
   eq_(
@@ -194,7 +198,7 @@ def test_hash_join():
     EqOp(Var('t1.x'), Var('t2.z')),
   )
 
-  comparison = join_keys(t1(),t2(), multi_key)
+  comparison = join_keys(SCHEMA_1,SCHEMA_2, multi_key)
   j = tuple(hash_join(t1,t2, comparison, ctx))
 
   eq_(

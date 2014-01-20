@@ -31,7 +31,10 @@ class Adapter(object):
 
 
   def evaluate(self, loc):
-    return loc.replace(partial(self.table_scan, loc.node().name))
+    op = loc.node()
+    func = partial(self.table_scan, op.name)
+    func.schema = op.schema
+    return loc.replace(func)
 
   def schema(self, name):
     raise NotImplementedError(
