@@ -1,7 +1,7 @@
 from .query import Query, view_replacer
 from .query_builder import QueryBuilder
 from .query_parser import parse_statement
-from .relation import NullRelation, NullAdapter
+from .adapters.null_adapter import  NullAdapter
 from .ast import LoadOp
 from .aggregate import Aggregate
 from .compilers import local
