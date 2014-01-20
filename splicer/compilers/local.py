@@ -19,7 +19,7 @@ def compile(query):
     visit_with(
       query.dataset,      
       (isa(LoadOp), load_relation),
-      (isa(ProjectionOp), projection_op),
+      (isa(ProjectionOp), ensure_group_op_when_ags),
       (isa_op, relational_op),
       (is_callable, validate_function)
     )
@@ -42,11 +42,15 @@ def is_callable(loc):
   return callable(loc.node())
 
 def validate_function(dataset, loc, function):
+  """
+  Simple validation which ensure that nodes have been
+  compiled to functions have a schema attribute set.
+  """
   assert hasattr(function, 'schema'), (
     "{} must have a schema attribute".format(function)
   )
-
   return loc
+
 def alias_op(dataset, operation):
   def alias(ctx):
     relation = operation.relation(ctx)
@@ -58,9 +62,7 @@ def alias_op(dataset, operation):
   return alias
 
 
-
-def projection_op(dataset, loc, operation):
-
+def ensure_group_op_when_ags(dataset, loc, operation):
   aggs = aggregates(operation.exprs, dataset)
   if aggs:
     # we have an aggregate operations, push them up to the group by
@@ -74,6 +76,10 @@ def projection_op(dataset, loc, operation):
       loc = loc.replace(GroupByOp(operation, aggregates=aggs)).down()
     else:
       loc = u.replace(parent_op.new(aggregates=aggs)).down()
+  return loc
+
+
+def projection_op(dataset,  operation):
 
   schema = operation.relation.schema
   columns = tuple([
@@ -97,9 +103,7 @@ def projection_op(dataset, loc, operation):
       )
     )
 
-
-  projection.schema = operation.schema
-  return loc.replace(projection)
+  return projection
 
 
 
