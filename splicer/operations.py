@@ -1,8 +1,8 @@
-from functools import partial
+# functions for manipulating operations go here
 
+from functools import partial
 from zipper import zipper
 
-# functions for manipulating operations go here
 from ast import LoadOp, JoinOp, EqOp, RelationalOp, Function, Var
 
 
@@ -70,21 +70,18 @@ def walk(operation, visitor):
 
   return loc.root()
 
-def view_replacer(dataset, loc, op):
-  view = dataset.get_view(op.name)
-  if view:
-    loc = loc.replace(view).leftmost_descendant()
-  return loc
 
 
-def replace_views(operation, dataset):
-  def adapt(loc):
-    node = loc.node()
-    if isinstance(node, LoadOp):
-      return view_replacer(dataset, loc, node)
-    else:
-      return loc
-  return walk(operation, adapt)
+def isa(type):
+  def test(loc):
+    return isinstance(loc.node(), type)
+  return test
 
-
+def visit_with(dataset, *visitors):
+  def visitor(loc):
+    for cond,f in visitors:
+      if cond(loc):
+        loc = f(dataset, loc, loc.node())
+    return loc
+  return visitor
 

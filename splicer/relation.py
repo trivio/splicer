@@ -26,6 +26,10 @@ class NullAdapter(Adapter):
     if relation == '':
       return True
 
+  def schema(self, name):
+    if name == '':
+      return Schema([])
+
   def table_scan(self, name, ctx):
     return NullRelation()
 

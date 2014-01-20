@@ -1,10 +1,10 @@
 from nose.tools import *
 
 from splicer import DataSet, Table, Query
+from splicer.dataset import replace_views
 from splicer.query_builder import QueryBuilder
 
-from splicer.ast import LoadOp, ProjectionOp, Var
-
+from splicer.ast import *
 from .fixtures.mock_adapter import MockAdapter
 
 
@@ -93,5 +93,68 @@ def test_views():
     )
   )
 
+
+def test_relpace_views():
+  dataset = DataSet()
+  dataset.add_adapter(MockAdapter())
+
+  no_managers = SelectionOp(
+    LoadOp('bogus'),
+    IsOp(Var('manager_id'), NullConst())
+  )
+
+  dataset.create_view(
+    'no_managers',
+    no_managers
+  )
+
+  eq_(
+    replace_views(LoadOp('no_managers'), dataset),
+    no_managers
+  )
+
+  eq_(
+    replace_views(
+      JoinOp(
+        LoadOp('no_managers'),
+        LoadOp('no_managers')
+      ),
+      dataset
+    ),
+
+    JoinOp(
+      no_managers,
+      no_managers
+    )
+
+  )
+
+def test_relpace_view_within_a_view():
+  dataset = DataSet()
+  dataset.add_adapter(MockAdapter())
+
+  dataset.create_view(
+    'view1',
+    LoadOp('bogus')
+  )
+
+  dataset.create_view(
+    'view2',
+    LoadOp('view1')
+  )
+
+  dataset.create_view(
+    'view3',
+    SelectionOp(LoadOp('view2'), IsOp(Var('x'), NullConst()))
+  )
+
+  eq_(
+    replace_views(
+      LoadOp('view3'), 
+      dataset
+    ),
+    SelectionOp(LoadOp('bogus'), IsOp(Var('x'), NullConst()))
+    
+  )
 
 

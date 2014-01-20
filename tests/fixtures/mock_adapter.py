@@ -35,5 +35,8 @@ class MockAdapter(Adapter):
   def has(self, name):
     return self._tables.has_key(name)
 
+  def schema(self, name):
+    return self._tables[name].schema    
+
   def get_relation(self, name):
     return self._tables.get(name)

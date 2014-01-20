@@ -1,13 +1,13 @@
-from .query import Query
+from .query import Query, view_replacer
 from .query_builder import QueryBuilder
 from .query_parser import parse_statement
 from .relation import NullRelation, NullAdapter
-
+from .ast import LoadOp
 from .aggregate import Aggregate
 from .compilers import local
 from .field import Field
 
-from .operations import replace_views
+from .operations import walk
 
 from . import functions
 
@@ -160,10 +160,9 @@ class DataSet(object):
 
     The search order is the same as dataset.get_relation()
     """
+    return self.adapter_for(name).schema(name)
 
-    return self.get_relation(name).schema
-
- 
+    #return self.get_relation(name).schema 
 
   def set_compiler(self, compile_fun):
     self.compile = compile_fun
@@ -184,12 +183,6 @@ class DataSet(object):
 
     return callable(ctx)
 
-  def relpace_view(self, op):
-    """
-    Given an operation tree return a new operation tree with 
-    LoadOps that reference views replaced with the operations 
-    of the view.
-    """
 
   def query(self, statement):
     """Parses the statement and returns a Query"""
@@ -200,4 +193,14 @@ class DataSet(object):
 
   def select(self, *cols):
     return QueryBuilder(self).select(*cols)
+
+
+def replace_views(operation, dataset):
+  def adapt(loc):
+    node = loc.node()
+    if isinstance(node, LoadOp):
+      return view_replacer(dataset, loc, node)
+    else:
+      return loc
+  return walk(operation, adapt)
 

@@ -8,6 +8,7 @@ class Expr(ImmutableMixin):
       and all(
         getattr(self, attr) == getattr(other, attr)
         for attr in self.__slots__
+        if attr != 'schema'
       )
     )
 
@@ -150,10 +151,11 @@ class Tuple(Expr):
     self.exprs = exprs
 
 class Function(Expr):
-  __slots__ = ('name', 'args')
-  def __init__(self, name, *args):
+  __slots__ = ('name', 'args', 'schema')
+  def __init__(self, name, *args, **kw):
     self.name = name
     self.args = args
+    self.schema = kw.get('schema')
 
   
 
@@ -215,43 +217,49 @@ class RelationalOp(Expr):
 
 class LoadOp(RelationalOp):
   """Load a relation with the given name"""
-  __slots__ = ('name',)
-  def __init__(self, name):
+  __slots__ = ('name','schema')
+  def __init__(self, name, schema=None):
     self.name = name
+    self.schema = schema
 
 class AliasOp(RelationalOp):
   """Rename the relation to the given name"""
-  __slots__ = ('relation', 'name')
-  def __init__(self, name, relation):
+  __slots__ = ('relation', 'name', 'schema')
+  def __init__(self, name, relation, schema=None):
     self.name = name
     self.relation = relation
+    self.schema = schema
 
 
 class ProjectionOp(RelationalOp):
-  __slots__ = ('relation', 'exprs')
-  def __init__(self, relation, *exprs):
+  __slots__ = ('relation', 'exprs', 'schema')
+  def __init__(self, relation, *exprs, **kw):
     self.relation = relation
     self.exprs = exprs
+    self.schema = kw.get('schema')
 
 class SelectionOp(RelationalOp):
-  __slots__ = ('relation','bool_op',)
-  def __init__(self, relation, bool_op):
+  __slots__ = ('relation','bool_op','schema')
+  def __init__(self, relation, bool_op, schema=None):
     self.relation = relation
     self.bool_op = bool_op
+    self.schema = schema
 
 class JoinOp(RelationalOp):
-  __slots__ = ('left','right', 'bool_op')
-  def __init__(self,  left, right, bool_op = TrueConst()):
+  __slots__ = ('left','right', 'bool_op', 'schema')
+  def __init__(self,  left, right, bool_op = TrueConst(), schema=None):
     self.left = left
     self.right = right
     self.bool_op = bool_op
+    self.schema = schema
 
 
 class OrderByOp(RelationalOp):
-  __slots__ = ('relation', 'exprs')
-  def __init__(self, relation, first, *exprs):
+  __slots__ = ('relation', 'exprs', 'schema')
+  def __init__(self, relation, first, *exprs, **kw):
     self.relation = relation
     self.exprs = (first,) + exprs
+    self.schema = kw.get('schema')
 
   def new(self, **parts):
     # OrderByOp's __init__ doesn't match what's defined in __slots__
@@ -265,7 +273,7 @@ class OrderByOp(RelationalOp):
 
 
 class GroupByOp(RelationalOp):
-  __slots__ = ('relation','aggregates','exprs',)
+  __slots__ = ('relation','aggregates','exprs','schema')
   def __init__(self, relation,  *exprs, **kw):
     self.relation   = relation
     self.exprs      = exprs
@@ -276,15 +284,19 @@ class GroupByOp(RelationalOp):
     # See compilers.local.projection_op for details
     self.aggregates = kw.get('aggregates', ())
 
+    self.schema = kw.get('schema')
+
 class SliceOp(RelationalOp):
-  __slots__ = ('relation','start','stop')
-  def __init__(self, relation, *args):
+  __slots__ = ('relation','start','stop', 'schema')
+  def __init__(self, relation, *args, **kw):
     self.relation = relation
     if len(args) == 1:
       self.start = 0
       self.stop = args[0]
     else:
       self.start, self.stop = args
+
+    self.schema = kw.get('schema')
 
   def new(self, **parts):
     # slice op's __init__ doesn't match what's defined in __slots__

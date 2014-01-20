@@ -3,7 +3,6 @@
 Module used to interpret the AST into a schema based on a given relation.
 """
 
-from .operations import replace_views
 from .schema import Schema,JoinSchema
 
 from .field import Field
@@ -12,44 +11,42 @@ from .ast import (
   JoinOp,
   Var, Function, 
   Const, UnaryOp, BinaryOp, AliasOp, SelectAllExpr,
-
   NumberConst, StringConst, BoolConst
 )
 
-def interpret(dataset, operations):
-  """
-  Returns the schema that will be produced if the given
-  operations are applied to the starting schema.
-  """
 
-  # todo, consider pushing this up into the dataset
-  # object as it maybe duplicated in the complie step
-  # as well
-  operations = replace_views(operations, dataset)
-  op_type = type(operations)
+def resolve_schema(dataset, loc, op):
+
   dispatch = op_type_to_schemas.get(
-    op_type,
+    type(op),
     schema_from_relation
-  ) 
-
-  return dispatch(operations, dataset)
+  )
+  schema = dispatch(op, dataset)
+  return loc.replace(op.new(
+    schema = schema 
+  ))
 
 
 def schema_from_relation(operation, dataset):
-  return interpret(dataset, operation.relation)
+  """
+  Return the schema from the relation's child, this is the default
+  method for any relation operation that doesn't modify the schema
+  """
+  return operation.relation.schema
+
 
 def schema_from_function_op(operation, dataset):
 
   func = dataset.get_function(operation.name)
   if callable(func.returns):
-    schema = interpret(dataset, operation.args[0])
-
+    schema = operation.args[0].schema
     return func.returns(schema, *[a.const for a in operation.args[1:]])
   else:
     return func.returns
 
 def schema_from_load(operation, dataset):
-  return dataset.get_relation(operation.name).schema
+  return dataset.get_schema(operation.name)
+  #return dataset.get_relation(operation.name).schema
 
 def schema_from_projection_op(projection_op, dataset):
   """
@@ -57,7 +54,7 @@ def schema_from_projection_op(projection_op, dataset):
   schema.
   """
 
-  schema = interpret(dataset, projection_op.relation)
+  schema = projection_op.relation.schema
 
   fields = [
     field
@@ -65,29 +62,20 @@ def schema_from_projection_op(projection_op, dataset):
     for field in fields_from_expr(expr,dataset,schema)
   ]
 
-  
-  return Schema(fields)
-
-def schema_from_projection_schema(projection_op, schema, dataset):
-  fields = [
-    field
-    for expr in projection_op.exprs
-    for field in fields_from_expr(expr,dataset,schema)
-  ]
   return Schema(fields)
 
 
 def schema_from_join_op(join_op, dataset):
-  left = interpret(dataset, join_op.left)
-  right = interpret(dataset, join_op.right)
+  left  =  join_op.left.schema
+  right =  join_op.right.schema
 
   return JoinSchema(left,right)
 
 
-
 def schema_from_alias_op(alias_op, dataset):
-  schema = interpret(dataset, alias_op.relation)
+  schema = alias_op.relation.schema
   return schema.new(name=alias_op.name)
+
 
 def fields_from_expr(expr, dataset, schema):
   if isinstance(expr, SelectAllExpr):
@@ -95,6 +83,7 @@ def fields_from_expr(expr, dataset, schema):
       yield field
   else:
     yield field_from_expr(expr, dataset, schema)
+
 
 def field_from_expr(expr, dataset, schema):
   """
@@ -157,6 +146,7 @@ def field_from_const(expr):
 def field_from_var(var_expr, schema):
   return schema[var_expr.path]
 
+
 def field_from_function(function_expr, dataset, schema):
   name = function_expr.name
   function = dataset.get_function(function_expr.name)
@@ -172,10 +162,10 @@ def field_from_function(function_expr, dataset, schema):
     raise ValueError("Can not determine return type of Function {}".format(name))
 
 
-
 def field_from_rename_op(expr, dataset, schema):
   field = field_from_expr(expr.expr, dataset, schema)
   return field.new(name=expr.name)
+
 
 op_type_to_schemas = {
   LoadOp: schema_from_load,

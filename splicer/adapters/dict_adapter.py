@@ -47,6 +47,9 @@ class DictAdapter(Adapter):
   def has(self, relation):
     return self._tables.has_key(relation)
 
+  def schema(self, relation):
+    return self._tables[relation].schema
+
   def get_relation(self, name):
     return self._tables.get(name)
 

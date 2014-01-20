@@ -5,38 +5,24 @@ from itertools import islice
 from ..ast import *
 
 from ..relation import Relation
-from ..operations import view_replacer, walk
+from ..operations import  walk, visit_with, isa
 from ..schema_interpreter import (
-  field_from_expr, schema_from_projection_op, 
-  schema_from_projection_schema, JoinSchema
+  field_from_expr,  JoinSchema,
 )
 
 
 def compile(query):
+  # resolve views and schemas
+
   return walk(
     query.operations, 
     visit_with(
-      query.dataset,
-      (isa(LoadOp), view_replacer),
+      query.dataset,      
       (isa(LoadOp), load_relation),
       (isa(ProjectionOp), projection_op),
       (isa_op, relational_op),
     )
   )
-
-
-def isa(type):
-  def test(loc):
-    return isinstance(loc.node(), type)
-  return test
-
-def visit_with(dataset, *visitors):
-  def visitor(loc):
-    for test,f in visitors:
-      if test(loc):
-        loc = f(dataset, loc, loc.node())
-    return loc
-  return visitor
 
 
 def isa_op(loc):
@@ -89,9 +75,8 @@ def projection_op(dataset, loc, operation):
       for column in group
     ])
 
-    schema = schema_from_projection_schema(operation, relation.schema, dataset)
+    schema = operation.schema
  
-
     return Relation(
       schema,
       (
