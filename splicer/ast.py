@@ -264,12 +264,12 @@ class OrderByOp(RelationalOp):
   def new(self, **parts):
     # OrderByOp's __init__ doesn't match what's defined in __slots__
     # so we have to help it make a copy of this object
-    exprs = parts.get('exprs', self.exprs)
+    exprs = parts.pop('exprs', self.exprs)
     first = exprs[0]
     tail = exprs[1:]
-    relation = parts.get('relation', self.relation)
+    relation = parts.pop('relation', self.relation)
 
-    return self.__class__(relation, first, *tail)
+    return self.__class__(relation, first, *tail, **parts)
 
 
 class GroupByOp(RelationalOp):
@@ -301,9 +301,9 @@ class SliceOp(RelationalOp):
   def new(self, **parts):
     # slice op's __init__ doesn't match what's defined in __slots__
     # so we have to help it make a copy of this object
-    args = parts.get('start', self.start), parts.get('stop', self.stop)
-    relation = parts.get('relation', self.relation)
-
-    return self.__class__(relation, *args)
+    args = parts.pop('start', self.start), parts.pop('stop', self.stop)
+    relation = parts.pop('relation', self.relation)
+ 
+    return self.__class__(relation, *args, **parts)
 
     

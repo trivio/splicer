@@ -1,7 +1,6 @@
 from .ast import LoadOp
-from .operations import  walk, visit_with, isa
+from .operations import isa
 from .schema_interpreter import resolve_schema
-
 
 class Query(object):
   __slots__ = {
@@ -13,13 +12,10 @@ class Query(object):
 
   def __init__(self, dataset,  operations):
     self.dataset = dataset
-    self.operations = walk(
-      operations,
-      visit_with(
-        dataset,
-        (isa(LoadOp), view_replacer),
-        (lambda loc: True, resolve_schema)
-      )
+    self.operations = resolve_schema(
+      dataset, 
+      operations, 
+      (isa(LoadOp), view_replacer)
     )
 
     self.schema = self.operations.schema

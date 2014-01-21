@@ -4,6 +4,7 @@ Module used to interpret the AST into a schema based on a given relation.
 """
 
 from .schema import Schema,JoinSchema
+from .operations import walk, visit_with
 
 from .field import Field
 from .ast import (
@@ -15,8 +16,26 @@ from .ast import (
 )
 
 
-def resolve_schema(dataset, loc, op):
+def resolve_schema(dataset, operations, *additional_visitors):
+  """
+  Given an expresion tree return a new tree whose node's
+  schema values are properly set.
+  """
 
+  visitors = additional_visitors + (
+    (lambda loc: True, resolve_schema_for_node),
+  )
+
+  return walk(
+    operations,
+    visit_with(
+      dataset,
+      *visitors
+    )
+  )
+
+
+def resolve_schema_for_node(dataset, loc, op):
   dispatch = op_type_to_schemas.get(
     type(op),
     schema_from_relation
@@ -39,8 +58,11 @@ def schema_from_function_op(operation, dataset):
 
   func = dataset.get_function(operation.name)
   if callable(func.returns):
-    schema = operation.args[0].schema
-    return func.returns(schema, *[a.const for a in operation.args[1:]])
+    #schema = operation.args[0].schema
+    return func.returns(*[
+      a.schema if hasattr(a,'schema') else a.const
+      for a in operation.args
+    ])
   else:
     return func.returns
 
