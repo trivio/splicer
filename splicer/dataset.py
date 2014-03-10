@@ -2,9 +2,12 @@ from .query import Query, view_replacer
 from .query_builder import QueryBuilder
 from .query_parser import parse_statement
 from .adapters.null_adapter import  NullAdapter
-from .ast import LoadOp
+from .ast import LoadOp, Expr
 from .aggregate import Aggregate
 from .compilers import local
+
+from .compilers.local import relational_function
+
 from .field import Field
 
 from .operations import walk
@@ -68,7 +71,6 @@ class DataSet(object):
 
 
     """
-
     def _(func, name=name):
       if name is None:
         name = func.__name__
@@ -160,7 +162,18 @@ class DataSet(object):
 
     The search order is the same as dataset.get_relation()
     """
-    return self.adapter_for(name).schema(name)
+
+    schema_or_expr = self.adapter_for(name).schema(name)
+    if not isinstance(schema_or_expr, Expr):
+      return schema_or_expr
+    else:
+      # it's an expression compile it... seems weird
+      # that the compile function is 'relational_function'
+      func = relational_function(self, schema_or_expr)
+      return func({})
+
+
+    
 
     #return self.get_relation(name).schema 
 
@@ -170,8 +183,8 @@ class DataSet(object):
   def set_dump_func(self, dump_func):
     self.dump_func = dump_func
 
-  def dump(self, relation):
-    self.dump_func(relation)
+  def dump(self, schema, relation):
+    self.dump_func(schema, relation)
 
   def execute(self, query, *params):
 

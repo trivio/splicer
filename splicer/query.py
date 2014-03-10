@@ -24,7 +24,7 @@ class Query(object):
     return iter(self.execute())
     
   def dump(self):
-    self.dataset.dump(self.execute())
+    self.dataset.dump(self.schema, self.execute())
 
   def create_view(self, name):
     self.dataset.create_view(name, self.operations)

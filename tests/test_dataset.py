@@ -4,6 +4,7 @@ from splicer import DataSet, Table, Query
 from splicer.dataset import replace_views
 from splicer.query_builder import QueryBuilder
 
+from splicer.schema import Schema
 from splicer.ast import *
 from .fixtures.mock_adapter import MockAdapter
 
@@ -23,6 +24,29 @@ def test_get_relation():
   assert_sequence_equal(
     dataset.relations, 
     [('bogus', s_table)]
+  )
+
+
+def test_get_schema():
+  class Adapter(object):
+    def has(self, name): return name == 'computed'
+
+    def schema(self, name):
+      return Function('myschema')
+
+  dataset = DataSet()
+  dataset.add_adapter(Adapter())
+
+  # Todo: figure out why I have to invoke this decorator here
+  @dataset.function()
+  def myschema():
+    return Schema([dict(name='field', type='string')])
+
+  schema = dataset.get_schema('computed')
+
+  eq_(
+    schema,
+    Schema([dict(name='field', type='string')])
   )
 
 def test_query_builder():

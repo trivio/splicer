@@ -5,7 +5,7 @@ import tempfile
 from nose.tools import *
 
 from splicer.functions.filesystem import files, extract_path, decode, contents
-from splicer import Relation, Schema
+from splicer import Schema
 
 def setup_func():
   global path
@@ -52,14 +52,13 @@ def test_files():
 
 from splicer.path import pattern_regex
 def test_extract_path():
-  r = Relation(
+  r = (
     Schema([dict(type="STRING", name="path")]),
     iter((
       ('/Music/Nirvana/Nevermind/Smells Like Teen Spirit.ogg',),
       ('/Videos/Electric Boogaloo.mp4',)
     ))
   )
-
 
   assert_sequence_equal(
     list(extract_path(r, "/Music/{artist}/{album}/{track}.{ext}")),
@@ -79,12 +78,13 @@ def test_contents():
   p = os.path.join(path, 'test.csv')
   open(p,'w').write('field1,field2\n1,2\n')
 
-  r = Relation(
-    Schema([dict(type="STRING", name="path")]),
+  r = (
+    Schema([dict(type="STRING", name="path")]), 
     iter((
       (p,),
     ))
   )
+  
 
   assert_sequence_equal(
     list(contents(r,  'path')),
@@ -98,7 +98,8 @@ def test_decode():
   p = os.path.join(path, 'test.csv')
   open(p,'w').write('field1,field2\n1,2\n')
 
-  r = Relation(
+
+  r = (
     Schema([dict(type="STRING", name="path")]),
     iter((
       (p,),

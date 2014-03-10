@@ -217,6 +217,7 @@ def slice_op(dataset, expr):
     
   return limit
 
+
 def relational_function(dataset, op):
   """Invokes a function that operates on a whole relation"""
   function = dataset.get_function(op.name)
@@ -226,7 +227,11 @@ def relational_function(dataset, op):
     if isinstance(arg_expr, Const):
       args.append(lambda ctx, const=arg_expr.const: const)
     elif callable(arg_expr):
-      args.append(arg_expr)
+      def c(ctx, f=arg_expr):
+        return  f.schema,f(ctx)
+      c.__name__ = arg_expr.schema.name
+
+      args.append(c)
     else:
       raise ValueError(
         "Only Relational Operations and constants "

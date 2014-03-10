@@ -2,6 +2,8 @@ from splicer import Schema, Field
 from splicer.adapters import Adapter
 from splicer.ast import *
 from splicer.path import pattern_regex, tokenize_pattern, regex_str, columns
+from splicer.codecs import schema_from_path
+from splicer.compilers.local import relational_function
 
 
 class DirAdapter(Adapter):
@@ -17,6 +19,16 @@ class DirAdapter(Adapter):
       for name, relation in self._relations.items()
     ]
 
+  def schema(self,  name):
+    relation = self.get_relation(name)
+    if relation.schema:
+      return relation.schema
+    elif relation.decode != 'none':
+      # todo: do the same thing as evaluate up to the point where we 
+      # list files
+      return extract_expr_tree(relation)
+
+
   def get_relation(self, name):
     return self._relations.get(name)
 
@@ -27,6 +39,7 @@ class DirAdapter(Adapter):
     return self._relations.has_key(name)
 
   def evaluate(self, loc):
+
     relation = self._relations[loc.node().name]
 
     op = Function(
@@ -97,6 +110,21 @@ class FileTable(object):
     if options:
       raise ValueError("Unrecognized options {}".format(options.keys()))
 
+
+def extract_expr_tree(relation):
+  op = Function(
+    'files', 
+    Const(relation.root_dir)
+  )
+
+  if relation.pattern:
+    return Function(
+      'extract_path', 
+      op, 
+      Const(relation.root_dir + relation.pattern)
+    )
+  else:
+    return op
 
 
 def rewrite_tree(partioned_fields, query_loc):

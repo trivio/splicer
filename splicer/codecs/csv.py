@@ -4,7 +4,6 @@ import csv
 from itertools import chain
 
 from ..schema import Schema
-from ..relation import Relation
 from . import decodes
 
 
@@ -32,13 +31,6 @@ def csv_decoder(stream):
   else:
     headers = tuple("column_%s" % col for col  in range(len(first_row)) )
     reader = chain([first_row], reader)
-  
-  schema = Schema([
-    dict(name=name, type="STRING")
-    for name in headers
-  ])
 
-  return Relation(
-    schema,
-    reader
-   )
+  return reader
+

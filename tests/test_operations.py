@@ -1,7 +1,7 @@
 # test_operations.py
 from nose.tools import *
 
-from splicer import DataSet, Relation, Schema
+from splicer import DataSet, Schema
 from splicer.operations import walk
 from splicer.ast import *
 

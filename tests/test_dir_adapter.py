@@ -103,7 +103,7 @@ def test_query_field_from_path():
   """
   Queries with SelectionOps that reference only fields
   parsed from the directory structre will rewrite
-  the query so that the file list is filtered before 
+  the query so that the file list is filtered without 
   opening/decoding the files.
   """
 
@@ -209,3 +209,25 @@ def test_query_field_from_path_and_contents():
       GeOp(Var('salary'), Const(40000))
     )
   )
+
+@with_setup(setup_func, teardown_func)
+def test_guess_schema():
+  for department in ('engineering', 'sales', 'marketing'):
+    sub_path = os.path.join(path, department)
+    os.mkdir(sub_path)
+    with open(os.path.join(sub_path, 'data.csv'),'w') as f:
+      f.write('column1, column2, column3\n')
+      for x in range(1000):
+        f.write('a, "b", 1\n')
+
+
+  adapter = DirAdapter(
+    employees = dict(
+      root_dir = path,
+      pattern = "{department}",
+      decode = "auto"
+    )
+  )
+
+  schema = adapter.schema('employees')
+

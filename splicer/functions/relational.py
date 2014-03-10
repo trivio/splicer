@@ -2,16 +2,14 @@
 Functions useable in the from clause
 """
 
-from ..relation import Relation
 from ..schema import Schema
 
 def init(dataset):
   dataset.add_function("flatten", flatten, flatten_schema)
 
 
-def flatten(relation, path):
+def flatten((schema,relation), path):
 
-  schema = relation.schema
   field = schema[path]
 
 
@@ -56,15 +54,12 @@ def flatten(relation, path):
   else:
     flatten_row = flatten_repeated_scalar
 
-  #TODO: remove the need to wrap the results in a relation
-  return Relation(
-    flatten_schema(schema, path), 
-    (
-      new_row
-      for row in relation
-      for new_row in flatten_row(row)
-    )
+  return (
+    new_row
+    for row in relation
+    for new_row in flatten_row(row)
   )
+
 
 def flatten_schema(schema, path):
   field = schema[path]

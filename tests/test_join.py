@@ -2,7 +2,7 @@ from sys import getsizeof
 
 from nose.tools import *
 
-from splicer import Relation, Schema
+from splicer import  Schema
 from splicer.compilers.join import (
   nested_block_join,
   buffered,
@@ -17,13 +17,11 @@ from splicer.ast import EqOp, And, Var, NumberConst
 SCHEMA_1 = Schema(name="t1", fields=[dict(name='x', type="INTEGER")])
 
 def t1(ctx=None):
-  return Relation(
-    SCHEMA_1,
-    iter((
-      (1,),
-      (2,)
-    ))
-  )
+  return iter((
+    (1,),
+    (2,)
+  ))
+  
 
 SCHEMA_2 = Schema(
   name="t2", 
@@ -34,15 +32,12 @@ SCHEMA_2 = Schema(
 )
 
 def t2(ctx=None): 
-  return Relation(
-    SCHEMA_2,
-    iter((
-      (1,0),
-      (1,1),
-      (3,1)
-    ))
-  )
- 
+  return iter((
+    (1,0),
+    (1,1),
+    (3,1)
+  ))
+  
 
 def test_record_size():
   t = (1,2, "blah")
