@@ -55,7 +55,13 @@ class DirAdapter(Adapter):
       )
 
     if relation.decode != 'none':
-      loc = loc.replace(Function('decode', loc.node(), Const(relation.decode)))
+      loc = loc.replace(Function(
+        'decode', 
+        loc.node(), 
+        Const(relation.decode),
+        Const('path'),
+        Const(relation.schema)
+      ))
 
     return loc.leftmost_descendant()
 
