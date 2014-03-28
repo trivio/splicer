@@ -71,7 +71,7 @@ def files(root_dir, filename_column="path"):
     (
       (join(root,f), )
       for root, dirs, files in os.walk(root_dir)
-      for f in files
+      for f in files if not f.startswith('.')
     )
   )
 
