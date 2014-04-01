@@ -23,7 +23,13 @@ def csv_decoder(stream):
     # column csv files
     has_header = True
     dialect = csv.excel
-
+  
+  #evil hack just for tonight. Sniffer
+  # gets confused if file begins with to many
+  # common delimiter characters. Long term
+  # solution is to allow specifying settings when adding
+  # a data set
+  dialect.delimiter = '\x01'
   reader = csv.reader(stream, dialect)
 
   first_row = next(reader)  
