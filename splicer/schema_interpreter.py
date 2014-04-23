@@ -3,8 +3,9 @@
 Module used to interpret the AST into a schema based on a given relation.
 """
 
+from . import Relation
 from .schema import Schema,JoinSchema
-from .operations import walk, visit_with
+from .operations import walk, visit_with, is_not
 
 from .field import Field
 from .ast import (
@@ -23,7 +24,7 @@ def resolve_schema(dataset, operations, *additional_visitors):
   """
 
   visitors = additional_visitors + (
-    (lambda loc: True, resolve_schema_for_node),
+    (is_not(Relation), resolve_schema_for_node),
   )
 
   return walk(
@@ -35,15 +36,18 @@ def resolve_schema(dataset, operations, *additional_visitors):
   )
 
 
+
 def resolve_schema_for_node(dataset, loc, op):
   dispatch = op_type_to_schemas.get(
     type(op),
-    schema_from_relation
+    update_op(schema_from_relation)
   )
-  schema = dispatch(op, dataset)
-  return loc.replace(op.new(
-    schema = schema 
-  ))
+ 
+  # each dispatch will return an operation that will
+  # replace the current node. The operation may
+  # simply be updated with a new schema, or it could
+  # be relpaced with a new subtree, or function
+  return loc.replace(dispatch(op, dataset))
 
 
 def schema_from_relation(operation, dataset):
@@ -54,19 +58,65 @@ def schema_from_relation(operation, dataset):
   return operation.relation.schema
 
 
-def schema_from_function_op(operation, dataset):
 
+
+# Todo:
+# Function -> Relation(Schema, (context-> [Tuples]))
+def schema_from_function_op(operation, dataset):
   func = dataset.get_function(operation.name)
+
   if callable(func.returns):
     #schema = operation.args[0].schema
-    return func.returns(*[
-      a.schema if hasattr(a,'schema') else a.const
+
+    args = [
+      a if hasattr(a,'schema') else a.const
       for a in operation.args
-    ])
+    ]
+
+    schema = func.returns(*args)
+
   else:
-    return func.returns
+    schema = func.returns
+
+  def invoke(ctx):
+    return func(ctx, *args)
+
+  return operation.new(schema=schema, func=invoke)
+
+  #return Relation(schema, relational_function(dataset, operation))
+
+def relational_function(dataset, op):
+  """Invokes a function that operates on a whole relation"""
+  return op.func
+  function = dataset.get_function(op.name)
+
+  args = []
+  for arg_expr in op.args:
+    if isinstance(arg_expr, Const):
+      #args.append(lambda ctx, const=arg_expr.const: const)
+      args.append(arg_expr.const)
+    elif isinstance(arg_expr, Relation):
+      #def c(ctx, f=arg_expr):
+      #  import pdb; pdb.set_trace()
+      #  return  f.schema,f(ctx)
+      #c.__name__ = arg_expr.schema.name
+
+      args.append(arg_expr)
+    else:
+      raise ValueError(
+        "Only Relational Operations and constants "
+        "are allowed in table functions"
+      )
+
+  def invoke(ctx):
+    return function(ctx, *args)
+  return invoke
+
+
+
 
 def schema_from_load(operation, dataset):
+  import pdb; pdb.set_trace()
   return dataset.get_schema(operation.name)
   #return dataset.get_relation(operation.name).schema
 
@@ -188,11 +238,29 @@ def field_from_rename_op(expr, dataset, schema):
   field = field_from_expr(expr.expr, dataset, schema)
   return field.new(name=expr.name)
 
+def replace_schema(op, schema):
+  return op.new(schema=schema)
+
+# :: (operation -> dataset -> schema) -> (operation, dataset) -> RelationalOp|(callable)
+def update_op(func):
+  """
+  Adapts functions that return schemas to return operations.
+
+  Takes a function that returns a schema given an operation and a dataset.
+  Returns a function that when called with an operation and dataset returns
+  a new operation with the coresponding schema.
+  """
+  def _(operation, dataset):
+    schema = func(operation, dataset)
+    return replace_schema(operation, schema)
+  return _
+
 
 op_type_to_schemas = {
-  LoadOp: schema_from_load,
-  ProjectionOp: schema_from_projection_op,
-  AliasOp: schema_from_alias_op,
-  JoinOp: schema_from_join_op,
-  Function: schema_from_function_op
+  LoadOp: update_op(schema_from_load),
+  ProjectionOp: update_op(schema_from_projection_op),
+  AliasOp: update_op(schema_from_alias_op),
+  JoinOp: update_op(schema_from_join_op),
+  Function: schema_from_function_op,
+
 }

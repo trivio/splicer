@@ -39,7 +39,6 @@ class DirAdapter(Adapter):
     return self._relations.has_key(name)
 
   def evaluate(self, loc):
-
     relation = self._relations[loc.node().name]
 
     op = Function(
@@ -72,8 +71,8 @@ class DirAdapter(Adapter):
         'decode', 
         loc.node(), 
         Const(relation.decode),
-        Const('path'),
-        Const(relation.schema)
+        Const(relation.schema),
+        Const('path')
       ))
 
     return loc.leftmost_descendant()

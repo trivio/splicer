@@ -3,7 +3,8 @@
 from functools import partial
 from zipper import zipper
 
-from ast import LoadOp, JoinOp, EqOp, RelationalOp, Function, Var
+from . import Relation
+from .ast import LoadOp, JoinOp, EqOp, RelationalOp, Function, Var
 
 
 
@@ -11,7 +12,7 @@ def query_zipper(operation):
   return zipper(operation, is_branch, children, make_node)
 
 def is_branch(operation):
-  return not isinstance(operation, LoadOp)
+  return not type(operation) in (Relation, LoadOp)
 
 def children(operation):
   if isinstance(operation, JoinOp):
@@ -75,6 +76,11 @@ def walk(operation, visitor):
 def isa(type):
   def test(loc):
     return isinstance(loc.node(), type)
+  return test
+
+def is_not(type):
+  def test(loc):
+    return not isinstance(loc.node(), type)
   return test
 
 def visit_with(dataset, *visitors):

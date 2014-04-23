@@ -14,7 +14,7 @@ def init(dataset):
   dataset.add_function("extract_path", extract_path, extract_path_schema)
 
 
-def contents((schema, relation), path_column, content_column='contents'):
+def contents(ctx, relation, path_column, content_column='contents'):
   """
   Given a relation and a path_column, returns a new relation
   whose rows are the same as the original relation with the
@@ -24,18 +24,18 @@ def contents((schema, relation), path_column, content_column='contents'):
   as entire contents of the file are read into memory.
   """
 
-  field_pos = schema.field_position(path_column)
+  field_pos = relation.schema.field_position(path_column)
  
   return (
     row + (open(row[field_pos]).read(), )
-    for row in relation
+    for row in relation(ctx)
   )
 
-def contents_schema(schema, path_column, content_column='contents'):
-  return Schema(schema.fields + [dict(type='BINARY', name=content_column)])
+def contents_schema(relation, path_column, content_column='contents'):
+  return Schema(relation.schema.fields + [dict(type='BINARY', name=content_column)])
   
 
-def decode((schema, relation), mime_type, schema_or_path, path_column="path"):
+def decode(ctx, relation, mime_type, schema_or_path, path_column="path"):
   """
   Takes a relation that has a column which contains a path to a file.
   Returns one row for each row found in each file.
@@ -58,28 +58,37 @@ def decode((schema, relation), mime_type, schema_or_path, path_column="path"):
 
 
   """
-  #relation_from_path = codecs.relation_from_path
-  field_pos = schema.field_position(path_column)
+
+  field_pos = relation.schema.field_position(path_column)
 
   return (
     r + tuple(s)
-    for r in relation
+    for r in relation(ctx)
     for s in relation_from_path(r[field_pos], mime_type)
   )
 
-def decode_schema(schema, mime_type, schema_or_path, path_column="path"):
+def decode_schema(relation, mime_type,  final_schema, path_column="path"):
   #relation_from_path = codecs.schema_from_path
-  
-  if isinstance(schema_or_paths, Schema):
-    return schema_or_paths
-  else:
-    return Schema(
-      schema.fields + 
-      schema_from_path(schema_or_path).fields
-    )
+
+  if not final_schema:
+    # otherwise let's guess, note this is slow operation
+    schema = relation.schema
+    field_pos = schema.field_position(path_column)
+
+    first = next(relation.records({}))
+
+    path = first[field_pos]
+
+    final_schema = relation_from_path(path, schema_or_mime_type)
 
 
-def files(root_dir, filename_column="path"):
+  return Schema(
+    relation.schema.fields + 
+    final_schema.fields
+  )
+
+
+def files(ctx, root_dir, filename_column="path"):
   """
   Return an iterator of all filenames starting at root_dir or below
   """ 
@@ -91,9 +100,12 @@ def files(root_dir, filename_column="path"):
   )
  
 def files_schema(root_dir, filename_column="path"):
-  return Schema([dict(type="STRING", name=filename_column)])
+  return Schema(
+    fields = [dict(type="STRING", name=filename_column)], 
+    name='files({})'.format(root_dir)
+  )
 
-def extract_path((schema,files), pattern, path_column="path"):
+def extract_path(ctx, files_relation, pattern, path_column="path"):
   """
   Extracts patterns out of file paths and urls.
 
@@ -106,25 +118,24 @@ def extract_path((schema,files), pattern, path_column="path"):
   ['/some/path'] -> ['/some/path', 'some', 'path']
   """
 
-  field_pos = schema.field_position(path_column)
+  field_pos = files_relation.schema.field_position(path_column)
   regex, columns = pattern_regex(pattern)
 
 
-  def extract():
-    for row in files:
-      path = row[field_pos]
-      m = regex.match(path)
-      if m:
-        yield row + m.groups()
+  for row in files_relation.records(ctx):
+    path = row[field_pos]
+    m = regex.match(path)
+    if m:
+      yield row + m.groups()
 
-  return extract()
 
-def extract_path_schema(schema, pattern, path_column="path"):
+def extract_path_schema(relation, pattern, path_column="path"):
   regex, columns = pattern_regex(pattern)
+  schema = relation.schema
 
   return Schema(schema.fields + [
     dict(name=c, type='STRING')
     for c in columns    
-  ])
+  ], name="extract_path({})".format(pattern))
 
 

@@ -12,6 +12,7 @@ class Query(object):
 
   def __init__(self, dataset,  operations):
     self.dataset = dataset
+
     self.operations = resolve_schema(
       dataset, 
       operations, 
@@ -33,12 +34,16 @@ class Query(object):
     return self.dataset.execute(self, *params)
 
 
-
 def view_replacer(dataset, loc, op):
   view = dataset.get_view(op.name)
   if view:
-    loc = loc.replace(view).leftmost_descendant()
-  return loc
+    return loc.replace(view).leftmost_descendant()
+  else:
+    return load_relation(dataset, loc, op)
+ 
 
+def load_relation(dataset, loc, op):
+  adapter = dataset.adapter_for(op.name)
+  return adapter.evaluate(loc)
 
 

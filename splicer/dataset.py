@@ -45,6 +45,7 @@ class DataSet(object):
 
     if adapter not in self.adapters:
       self.adapters.append(adapter)
+    return adapter
 
   def create_view(self, name, query_or_operations):
     if isinstance(query_or_operations, basestring):
@@ -110,6 +111,8 @@ class DataSet(object):
       raise NameError("No function named {}".format(name))
 
   def get_view(self, name):
+    return self.views.get(name)
+
     view = self.views.get(name)
     if view:
       return replace_views(view,self)

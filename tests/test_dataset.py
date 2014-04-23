@@ -1,6 +1,6 @@
 from nose.tools import *
 
-from splicer import DataSet, Table, Query
+from splicer import DataSet, Table, Query, Relation
 from splicer.dataset import replace_views
 from splicer.query_builder import QueryBuilder
 
@@ -39,7 +39,7 @@ def test_get_schema():
 
   # Todo: figure out why I have to invoke this decorator here
   @dataset.function()
-  def myschema():
+  def myschema(ctx):
     return Schema([dict(name='field', type='string')])
 
   schema = dataset.get_schema('computed')
@@ -89,9 +89,9 @@ def test_query():
 
 def test_views():
   dataset = DataSet()
-  dataset.add_adapter(MockAdapter())
-
-
+  adapter = dataset.add_adapter(MockAdapter())
+  relation = Relation(adapter, 'bogus', None, None)
+  
   # create a view off of an existing table
   dataset.select('x').frm('bogus').create_view('only_x')
 
@@ -99,28 +99,29 @@ def test_views():
 
   eq_(
     view,
-    ProjectionOp(LoadOp('bogus'), Var('x'))
+    ProjectionOp(relation, Var('x'))
   )
-
+ 
   # create a view off of a view
   dataset.select('x').frm('only_x').create_view('only_x_from_x')
 
   view = dataset.get_view('only_x_from_x')
+
 
   eq_(
     view,
     # Todo: Implement a query optimizer that eliminates
     # redunant projections ops like the one we see below
     ProjectionOp(
-      ProjectionOp(LoadOp('bogus'), Var('x')),
+      ProjectionOp(relation, Var('x')),
       Var('x')
     )
   )
 
 
-def test_relpace_views():
+def test_replace_views():
   dataset = DataSet()
-  dataset.add_adapter(MockAdapter())
+  adapter = dataset.add_adapter(MockAdapter())
 
   no_managers = SelectionOp(
     LoadOp('bogus'),
@@ -153,9 +154,10 @@ def test_relpace_views():
 
   )
 
-def test_relpace_view_within_a_view():
+def test_replace_view_within_a_view():
   dataset = DataSet()
-  dataset.add_adapter(MockAdapter())
+  adapter = dataset.add_adapter(MockAdapter())
+  relation = Relation(adapter,'bogus', None, None)
 
   dataset.create_view(
     'view1',
@@ -172,6 +174,11 @@ def test_relpace_view_within_a_view():
     SelectionOp(LoadOp('view2'), IsOp(Var('x'), NullConst()))
   )
 
+  v =  replace_views(
+    LoadOp('view3'), 
+    dataset
+  )
+  
   eq_(
     replace_views(
       LoadOp('view3'), 

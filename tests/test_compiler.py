@@ -12,11 +12,12 @@ from .fixtures.employee_adapter import EmployeeAdapter
 def test_projection():
   dataset = DataSet()
   dataset.add_adapter(EmployeeAdapter())
-
+  
   q = Query(
     dataset,  
     ProjectionOp(LoadOp('employees'), Var('full_name'))
   )
+  
   evaluate = compile(q)
 
   assert_sequence_equal(

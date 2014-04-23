@@ -8,7 +8,8 @@ def init(dataset):
   dataset.add_function("flatten", flatten, flatten_schema)
 
 
-def flatten((schema,relation), path):
+def flatten(ctx, relation, path):
+  schema = relation.schema
 
   field = schema[path]
 
@@ -56,12 +57,13 @@ def flatten((schema,relation), path):
 
   return (
     new_row
-    for row in relation
+    for row in relation(ctx)
     for new_row in flatten_row(row)
   )
 
 
-def flatten_schema(schema, path):
+def flatten_schema(relation, path):
+  schema = relation.schema
   field = schema[path]
   new_fields = schema.fields[:]
   field_pos = schema.field_position(path)

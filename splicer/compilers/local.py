@@ -6,7 +6,7 @@ from ..ast import *
 
 from ..operations import  walk, visit_with, isa
 from ..schema_interpreter import (
-  field_from_expr,  JoinSchema,
+  field_from_expr,  JoinSchema, relational_function
 )
 
 
@@ -76,7 +76,6 @@ def ensure_group_op_when_ags(dataset, loc, operation):
 
 
 def projection_op(dataset,  operation):
-
   schema = operation.relation.schema
   columns = tuple([
     column
@@ -218,29 +217,6 @@ def slice_op(dataset, expr):
   return limit
 
 
-def relational_function(dataset, op):
-  """Invokes a function that operates on a whole relation"""
-  function = dataset.get_function(op.name)
-
-  args = []
-  for arg_expr in op.args:
-    if isinstance(arg_expr, Const):
-      args.append(lambda ctx, const=arg_expr.const: const)
-    elif callable(arg_expr):
-      def c(ctx, f=arg_expr):
-        return  f.schema,f(ctx)
-      c.__name__ = arg_expr.schema.name
-
-      args.append(c)
-    else:
-      raise ValueError(
-        "Only Relational Operations and constants "
-        "are allowed in table functions"
-      )
-
-  def invoke(ctx):
-    return function(*[a(ctx) for a in args])
-  return invoke
 
 def is_aggregate(expr, dataset):
   """Returns true if the expr is an aggregate function."""

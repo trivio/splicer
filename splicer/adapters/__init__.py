@@ -1,3 +1,4 @@
+from .. import Relation
 from functools import partial 
 class Adapter(object):
   """
@@ -30,11 +31,12 @@ class Adapter(object):
     )
 
 
-  def evaluate(self, loc):
+  def evaluate(self,  loc):
     op = loc.node()
+    #import pdb; pdb.set_trace()
     func = partial(self.table_scan, op.name)
-    func.schema = op.schema
-    return loc.replace(func)
+    #func.schema = op.schema
+    return loc.replace(Relation(self, op.name, self.schema(op.name), func))
 
   def schema(self, name):
     raise NotImplementedError(

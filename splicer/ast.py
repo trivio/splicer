@@ -151,11 +151,15 @@ class Tuple(Expr):
     self.exprs = exprs
 
 class Function(Expr):
-  __slots__ = ('name', 'args', 'schema')
+  __slots__ = ('name', 'args', 'schema', 'func')
   def __init__(self, name, *args, **kw):
     self.name = name
     self.args = args
     self.schema = kw.get('schema')
+    self.func = kw.get('func')
+
+  def __call__(self,ctx):
+    return self.func(ctx)
 
   
 

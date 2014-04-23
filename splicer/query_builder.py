@@ -19,9 +19,10 @@ class QueryBuilder(object):
     'load': '-> nullary op',
     'ordering': '-> [Field] -- results ',
     'grouping': '-> [Field]',
-    'qualifiers': '-> str',
+    'qualifiers': 'str',
     'stop': "int",
-    'start': "int"
+    'start': "int",
+    '_query': 'Query'
   }
 
 
@@ -45,6 +46,9 @@ class QueryBuilder(object):
     self.grouping = []
     self.start = None
     self.stop = None
+
+    # lazy build Query
+    self._query = None
 
   def __repr__(self):
     return repr(self.schema)
@@ -104,6 +108,8 @@ class QueryBuilder(object):
     """
     Returns a valid query suitable for execution, or raises an exception.
     """
+    if self._query:
+      return self._query
 
     if not self.load:
       operations = LoadOp('')
@@ -139,7 +145,8 @@ class QueryBuilder(object):
         stop = self.stop 
       operations = SliceOp(operations, self.start, stop)
 
-    return Query(self.dataset,  operations)
+    self._query = Query(self.dataset,  operations)
+    return self._query
 
 
   def has_aggregates(self, projection_op):
