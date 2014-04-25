@@ -14,6 +14,9 @@ class Expr(ImmutableMixin):
 
     return result
 
+  def __ne__(self, other):
+    return not self == other
+
 class UnaryOp(Expr):
   __slots__ = ('expr',)
   def __init__(self, expr):
