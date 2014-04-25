@@ -81,8 +81,9 @@ def schema_from_function_op(operation, dataset):
   def invoke(ctx):
     return func(ctx, *args)
 
-  return operation.new(schema=schema, func=invoke)
 
+  #return operation.new(schema=schema, func=invoke)
+  return Relation(None, operation.name, schema, invoke)
   #return Relation(schema, relational_function(dataset, operation))
 
 def relational_function(dataset, op):
@@ -116,7 +117,7 @@ def relational_function(dataset, op):
 
 
 def schema_from_load(operation, dataset):
-  import pdb; pdb.set_trace()
+
   return dataset.get_schema(operation.name)
   #return dataset.get_relation(operation.name).schema
 
