@@ -3,6 +3,7 @@ import tempfile
 import shutil
 
 from nose.tools import *
+from . import compare
 
 from splicer.ast import *
 from splicer.operations import query_zipper
@@ -39,7 +40,7 @@ def test_evaluate():
   
   res = adapter.evaluate(loc)
 
-  eq_(
+  compare(
     res.root(),
     Function(
       'extract_path',
@@ -81,9 +82,8 @@ def test_query_field_in_payload():
   res = adapter.evaluate(loc)
   relation = adapter.get_relation('employees')
 
-
  
-  eq_(
+  compare(
     res.root(),
     SelectionOp(
       Function(
@@ -133,7 +133,7 @@ def test_query_field_from_path():
 
   
  
-  eq_(
+  compare(
     res.root(),
     Function(
       'decode',
@@ -191,7 +191,7 @@ def test_query_field_from_path_and_contents():
 
   
  
-  eq_(
+  compare(
     res.root(),
     SelectionOp(  
       Function(

@@ -6,6 +6,8 @@ from splicer.query_builder import QueryBuilder
 
 from splicer.schema import Schema
 from splicer.ast import *
+
+from . import compare
 from .fixtures.mock_adapter import MockAdapter
 
 
@@ -31,16 +33,17 @@ def test_get_schema():
   class Adapter(object):
     def has(self, name): return name == 'computed'
 
-    def schema(self, name):
-      return Function('myschema')
+    def evaluate(self, loc):
+      return loc.replace(Function('myschema'))
 
   dataset = DataSet()
   dataset.add_adapter(Adapter())
 
   # Todo: figure out why I have to invoke this decorator here
-  @dataset.function()
+
+  @dataset.function(returns = lambda:Schema([dict(name='field', type='string')]))
   def myschema(ctx):
-    return Schema([dict(name='field', type='string')])
+    pass
 
   schema = dataset.get_schema('computed')
 
@@ -174,12 +177,8 @@ def test_replace_view_within_a_view():
     SelectionOp(LoadOp('view2'), IsOp(Var('x'), NullConst()))
   )
 
-  v =  replace_views(
-    LoadOp('view3'), 
-    dataset
-  )
   
-  eq_(
+  compare(
     replace_views(
       LoadOp('view3'), 
       dataset
