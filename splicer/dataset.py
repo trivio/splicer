@@ -166,19 +166,17 @@ class DataSet(object):
     The search order is the same as dataset.get_relation()
     """
 
-    schema_or_expr = self.adapter_for(name).schema(name)
-    if not isinstance(schema_or_expr, Expr):
-      return schema_or_expr
-    else:
-      # it's an expression compile it... seems weird
-      # that the compile function is 'relational_function'
-      func = relational_function(self, schema_or_expr)
-      return func({})
-
-
+    return Query(self, LoadOp(name)).schema
     
+    # schema_or_expr = self.adapter_for(name).schema(name)
+    # if not isinstance(schema_or_expr, Expr):
+    #   return schema_or_expr
+    # else:
+    #   # it's an expression compile it... seems weird
+    #   # that the compile function is 'relational_function'
+    #   func = relational_function(self, schema_or_expr)
+    #   return func({})
 
-    #return self.get_relation(name).schema 
 
   def set_compiler(self, compile_fun):
     self.compile = compile_fun
