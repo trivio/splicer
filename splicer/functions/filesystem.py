@@ -51,9 +51,17 @@ def decode(relation, mime_type,  path_column="path", schema=None):
   else:
     schema = Schema(relation.schema.fields + schema.fields)
 
+  warnings = []
+  def v(rows):
+    for row in rows:
+      if len(row) != len(schema.fields):
+        warnings.append(row)
+      else:
+        yield row
+
   return Relation(
     schema,
-    (
+    v(
       r + tuple(s)
       for r in relation
       for s in relation_from_path(r[field_pos], mime_type)
