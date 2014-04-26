@@ -5,9 +5,19 @@ import shutil
 from nose.tools import *
 from . import compare
 
+from splicer import Schema
 from splicer.ast import *
 from splicer.operations import query_zipper
 from splicer.adapters.dir_adapter import DirAdapter
+
+
+TEST_SCHEMA = Schema(fields=[
+  dict(type='STRING', name='department'),
+  dict(type='INTEGER', name='id'),
+  dict(type='STRING', name='full_name'),
+  dict(type='INTEGER', name='salary'),
+  dict(type='INTEGER', name='manager_id'),
+])
 
 
 def setup_func():
@@ -20,7 +30,7 @@ def teardown_func():
   try:
     shutil.rmtree(path)
   finally:
-    path =None
+    path = None
 
 
 @with_setup(setup_func, teardown_func)
@@ -58,19 +68,14 @@ def test_query_field_in_payload():
   SelectionOp(Function('decode', Function('extract_path', Function('files'))))
   """
 
+
   adapter = DirAdapter(
     employees = dict(
       root_dir = "/",
       pattern = "{department}",
       filename_column="path",
       decode = "auto",
-      schema = dict(fields=[
-        dict(type='STRING', name='department'),
-        dict(type='INTEGER', name='id'),
-        dict(type='STRING', name='full_name'),
-        dict(type='INTEGER', name='salary'),
-        dict(type='INTEGER', name='manager_id'),
-      ])
+      schema = TEST_SCHEMA
     )
   )
 
@@ -82,7 +87,6 @@ def test_query_field_in_payload():
   res = adapter.evaluate(loc)
   relation = adapter.get_relation('employees')
 
- 
   compare(
     res.root(),
     SelectionOp(
@@ -93,7 +97,10 @@ def test_query_field_in_payload():
           Function('files', Const(relation.root_dir)),
           Const(relation.root_dir + "{department}")
         ),
-        Const('auto')
+        Const('auto'),
+        Const(TEST_SCHEMA),
+        Const('path')
+
       ),
       GeOp(Var('salary'), Const(40000))
     )
@@ -113,13 +120,7 @@ def test_query_field_from_path():
       pattern = "{department}",
       filename_column="path",
       decode = "auto",
-      schema = dict(fields=[
-        dict(type='STRING', name='department'),
-        dict(type='INTEGER', name='id'),
-        dict(type='STRING', name='full_name'),
-        dict(type='INTEGER', name='salary'),
-        dict(type='INTEGER', name='manager_id'),
-      ])
+      schema = TEST_SCHEMA
     )
   )
 
@@ -145,7 +146,9 @@ def test_query_field_from_path():
         ),
         EqOp(Var('department'), Const('sales'))
       ),
-      Const('auto')
+      Const('auto'),
+      Const(TEST_SCHEMA),
+      Const('path')
     )
   )
 
@@ -190,7 +193,6 @@ def test_query_field_from_path_and_contents():
   relation = adapter.get_relation('employees')
 
   
- 
   compare(
     res.root(),
     SelectionOp(  
@@ -204,7 +206,9 @@ def test_query_field_from_path_and_contents():
           ),
           EqOp(Var('department'), Const('sales'))
         ),
-        Const('auto')
+        Const('auto'),
+        Const(TEST_SCHEMA),
+        Const('path')
       ),
       GeOp(Var('salary'), Const(40000))
     )

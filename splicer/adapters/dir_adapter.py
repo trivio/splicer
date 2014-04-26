@@ -104,7 +104,10 @@ class FileTable(object):
     self.decode = options.pop('decode', "none")
 
     schema = options.pop('schema',None)
-    self.schema = schema and Schema(**schema)
+    if isinstance(schema, Schema):
+      self.schema = schema
+    else:
+      self.schema = schema and Schema(**schema)
 
     if options:
       raise ValueError("Unrecognized options {}".format(options.keys()))
