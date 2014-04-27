@@ -1,6 +1,8 @@
 from nose.tools import eq_
 
 from splicer.operations import query_zipper
+from splicer import Relation
+from splicer.ast import LoadOp
 
 def compare(op1, op2):
   loc1 = query_zipper(op1).leftmost_descendant()
@@ -10,7 +12,7 @@ def compare(op1, op2):
     n1 = loc1.node()
     n2 = loc2.node()
 
-    if n1 != n2:
+    if not (compare_relation(n1,n2)  or n1 == n2):
       raise NodeDiffException(n1,n2)
 
     if any((loc1.at_end(), loc2.at_end())):
@@ -20,7 +22,16 @@ def compare(op1, op2):
     else:
       loc1 = loc1.postorder_next()
       loc2 = loc2.postorder_next()
- 
+
+def compare_relation(op1, op2):
+  types = map(type, (op1, op2))
+
+  if types in [[LoadOp, Relation], [Relation, LoadOp]]:
+    return op1.name == op2.name
+  else:
+    return False
+
+
 
 class NodeDiffException(ValueError):
   def __init__(self, n1,n2):

@@ -1,6 +1,6 @@
 from nose.tools import *
 
-from splicer import DataSet, Table, Query, Relation
+from splicer import DataSet, Table, Query
 from splicer.dataset import replace_views
 from splicer.query_builder import QueryBuilder
 
@@ -93,7 +93,6 @@ def test_query():
 def test_views():
   dataset = DataSet()
   adapter = dataset.add_adapter(MockAdapter())
-  relation = Relation(adapter, 'bogus', None, None)
   
   # create a view off of an existing table
   dataset.select('x').frm('bogus').create_view('only_x')
@@ -102,7 +101,7 @@ def test_views():
 
   eq_(
     view,
-    ProjectionOp(relation, Var('x'))
+    ProjectionOp(LoadOp('bogus'), Var('x'))
   )
  
   # create a view off of a view
@@ -116,7 +115,7 @@ def test_views():
     # Todo: Implement a query optimizer that eliminates
     # redunant projections ops like the one we see below
     ProjectionOp(
-      ProjectionOp(relation, Var('x')),
+      ProjectionOp(LoadOp('bogus'), Var('x')),
       Var('x')
     )
   )
@@ -160,8 +159,7 @@ def test_replace_views():
 def test_replace_view_within_a_view():
   dataset = DataSet()
   adapter = dataset.add_adapter(MockAdapter())
-  relation = Relation(adapter,'bogus', None, None)
-
+ 
   dataset.create_view(
     'view1',
     LoadOp('bogus')
