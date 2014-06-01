@@ -13,7 +13,7 @@ def decodes(mime_type):
     return f
   return wraps
 
-def set_schema_mimetype(decoder_func, schema_infere_func):
+def set_schema_mimetype(decoder_func, schema_infer_func):
   """
   Partial function used to make the following decorator pattern work
 
@@ -22,15 +22,15 @@ def set_schema_mimetype(decoder_func, schema_infere_func):
     # function used to decode the given stream
 
   @csv_decoder.schema
-  def csv_chema(stream):
+  def csv_schema(stream):
     # function used to infer the schema from the given stream,
     # used when the schema isn't implicitly set
 
 
 
   """
-  decorder_func.returns = schema_infere_func
-  return f
+  decoder_func.returns = schema_infer_func
+  return decoder_func
 
 def relation_from(stream, mime_type):
   # todo guess mime_type if not provided
