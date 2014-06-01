@@ -36,8 +36,15 @@ class Query(object):
 
 def view_replacer(dataset, loc, op):
   view = dataset.get_view(op.name)
+
   if view:
-    return loc.replace(view).leftmost_descendant()
+    new_loc = loc.replace(view).leftmost_descendant()
+    # keep going until the leftmost_descendant isn't a view
+    return view_replacer(
+      dataset,
+      new_loc,
+      new_loc.node()
+    )
   else:
     return load_relation(dataset, loc, op)
  
