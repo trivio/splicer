@@ -1,6 +1,6 @@
 from nose.tools import *
 
-from splicer import  Schema, Field
+from splicer import  Schema, Field,Relation
 from splicer import codecs
 
 from StringIO import StringIO
@@ -11,20 +11,12 @@ def test_register_decoder():
   def decoder(stream):
 
     return (
-      Schema([dict(name="line", type="STRING")]),
-      (
-        (line.rstrip(),)
-        for line in stream
-      )
+      (line.rstrip(),)
+      for line in stream
     )
 
   stream = StringIO("blah\nfoo,1\nbaz")
   relation = codecs.relation_from(stream, mime_type='text/plain')
-  
-  eq_(
-    relation.schema.fields,
-    [Field(name='line', type='STRING')]
-  )
 
   eq_(
     list(relation),
@@ -37,16 +29,20 @@ def test_register_decoder():
 
 def test_decode_csv():
   stream = StringIO("field1,field2,field3\nfoo,1,0\nbaz,2,0")
-  relation = codecs.relation_from(stream, mime_type='text/csv')
 
-  # eq_(
-  #   relation.schema.fields,
-  #   [
-  #     Field(name='field1', type='STRING'),
-  #     Field(name='field2', type='STRING'),
-  #     Field(name='field3', type='STRING')
-  #   ]
-  # )
+  schema = codecs.schema_from(stream, mime_type='text/csv')
+  
+  eq_(
+     schema,
+     Schema([
+       Field(name='field1', type='STRING'),
+       Field(name='field2', type='STRING'),
+       Field(name='field3', type='STRING')
+     ])
+  )
+
+
+  relation = codecs.relation_from(stream, mime_type='text/csv')
 
   assert_sequence_equal(
     list(relation),

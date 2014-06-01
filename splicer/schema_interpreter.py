@@ -65,6 +65,9 @@ def schema_from_relation(operation, dataset):
 def schema_from_function_op(operation, dataset):
   func = dataset.get_function(operation.name)
 
+  if hasattr(func, 'resolve'):
+    return func.resolve(dataset)
+
   if callable(func.returns):
     #schema = operation.args[0].schema
 
@@ -78,13 +81,11 @@ def schema_from_function_op(operation, dataset):
   else:
     schema = func.returns
 
-  def invoke(ctx):
+  def records(ctx):
     return func(ctx, *args)
 
 
-  #return operation.new(schema=schema, func=invoke)
-  return Relation(None, operation.name, schema, invoke)
-  #return Relation(schema, relational_function(dataset, operation))
+  return Relation(None, operation.name, schema, records)
 
 def relational_function(dataset, op):
   """Invokes a function that operates on a whole relation"""

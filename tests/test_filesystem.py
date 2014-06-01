@@ -5,7 +5,7 @@ import tempfile
 from nose.tools import *
 
 from splicer.functions.filesystem import files, extract_path, decode, contents
-from splicer import Schema
+from splicer import Relation, Schema
 
 def setup_func():
   global path
@@ -33,7 +33,7 @@ def test_files():
       for track in range(4):
         open(os.path.join(album_path,"{}.ogg".format(track)), 'w')
 
-  songs = files(path)
+  songs = files({}, path)
 
   items = sorted(songs)
 
@@ -52,16 +52,18 @@ def test_files():
 
 from splicer.path import pattern_regex
 def test_extract_path():
-  r = (
+  r = Relation(
+    None, None, #adapter, name, note needed for test
     Schema([dict(type="STRING", name="path")]),
-    iter((
+    lambda ctx: iter((
       ('/Music/Nirvana/Nevermind/Smells Like Teen Spirit.ogg',),
       ('/Videos/Electric Boogaloo.mp4',)
     ))
   )
 
+
   assert_sequence_equal(
-    list(extract_path(r, "/Music/{artist}/{album}/{track}.{ext}")),
+    list(extract_path({}, r, "/Music/{artist}/{album}/{track}.{ext}")),
     [
       (
         '/Music/Nirvana/Nevermind/Smells Like Teen Spirit.ogg', 
@@ -78,16 +80,17 @@ def test_contents():
   p = os.path.join(path, 'test.csv')
   open(p,'w').write('field1,field2\n1,2\n')
 
-  r = (
+  r = Relation(
+    None, None,
     Schema([dict(type="STRING", name="path")]), 
-    iter((
+    lambda ctx: iter((
       (p,),
     ))
   )
   
 
   assert_sequence_equal(
-    list(contents(r,  'path')),
+    list(contents({}, r,  'path')),
     [
       (p, 'field1,field2\n1,2\n')
     ]
@@ -99,15 +102,16 @@ def test_decode():
   open(p,'w').write('field1,field2\n1,2\n')
 
 
-  r = (
+  r = Relation(
+    None, None,
     Schema([dict(type="STRING", name="path")]),
-    iter((
+    lambda ctx: iter((
       (p,),
     ))
   )
 
   assert_sequence_equal(
-    list(decode(r, 'auto', 'path')),
+    list(decode({}, r, 'auto', 'path')),
     [
       (p, '1', '2')
     ]

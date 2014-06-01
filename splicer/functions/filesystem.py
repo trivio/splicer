@@ -68,18 +68,16 @@ def decode(ctx, relation, mime_type, schema_or_path, path_column="path"):
   )
 
 def decode_schema(relation, mime_type,  final_schema, path_column="path"):
-  #relation_from_path = codecs.schema_from_path
 
   if not final_schema:
-    # otherwise let's guess, note this is slow operation
+    #  let's guess, note this is almost always a slow operation
     schema = relation.schema
     field_pos = schema.field_position(path_column)
 
     first = next(relation.records({}))
 
     path = first[field_pos]
-
-    final_schema = relation_from_path(path, schema_or_mime_type)
+    final_schema = schema_from_path(path, mime_type)
 
 
   return Schema(
