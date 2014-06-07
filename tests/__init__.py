@@ -1,3 +1,4 @@
+import os
 from nose.tools import eq_
 
 from splicer.operations import query_zipper
@@ -31,6 +32,9 @@ def compare_relation(op1, op2):
   else:
     return False
 
+def fixture_path(name=""):
+  d = os.path.dirname(__file__)
+  return os.path.join(*[d,'fixtures', name])
 
 
 class NodeDiffException(ValueError):

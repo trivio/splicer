@@ -111,7 +111,7 @@ def test_decode():
   )
 
   assert_sequence_equal(
-    list(decode({}, r, 'auto', 'path')),
+    list(decode({}, r, 0, 'auto')),
     [
       (p, '1', '2')
     ]

@@ -2,6 +2,7 @@ import os
 from os.path import join
 from itertools import chain
 
+from .. import Relation
 from ..schema import Schema
 from ..codecs import schema_from_path, relation_from_path
 from splicer.path import pattern_regex, regex_str
@@ -35,7 +36,7 @@ def contents_schema(relation, path_column, content_column='contents'):
   return Schema(relation.schema.fields + [dict(type='BINARY', name=content_column)])
   
 
-def decode(ctx, relation, mime_type, schema_or_path, path_column="path"):
+def decode(ctx, relation, path_pos, mime_type):
   """
   Takes a relation that has a column which contains a path to a file.
   Returns one row for each row found in each file.
@@ -59,31 +60,40 @@ def decode(ctx, relation, mime_type, schema_or_path, path_column="path"):
 
   """
 
-  field_pos = relation.schema.field_position(path_column)
-
   return (
     r + tuple(s)
     for r in relation(ctx)
-    for s in relation_from_path(r[field_pos], mime_type)
+    for s in relation_from_path(r[path_pos], mime_type)
   )
 
-def decode_schema(relation, mime_type,  final_schema, path_column="path"):
+def decode_resolve(func, dataset, relation, mime_type, final_schema, path_column="path"):
+
+  path_pos = relation.schema.field_position(path_column)
 
   if not final_schema:
-    #  let's guess, note this is almost always a slow operation
-    schema = relation.schema
-    field_pos = schema.field_position(path_column)
+    #  let's guess... note: this is typically a slow operation
+    final_schema = decode_schema(relation,  path_pos, mime_type)
 
-    first = next(relation.records({}))
+  schema =  Schema(relation.schema.fields + final_schema.fields)
 
-    path = first[field_pos]
-    final_schema = schema_from_path(path, mime_type)
-
-
-  return Schema(
-    relation.schema.fields + 
-    final_schema.fields
+  return Relation(
+    None, 
+    'decode', 
+    schema, 
+    lambda ctx: decode(ctx, relation, path_pos, mime_type)
   )
+
+
+decode.resolve = decode_resolve
+
+def decode_schema(relation, path_pos, mime_type):
+
+  first = next(relation.records({}))
+
+  path = first[path_pos]
+  return schema_from_path(path, mime_type)
+
+
 
 
 def files(ctx, root_dir, filename_column="path"):

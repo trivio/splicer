@@ -54,7 +54,7 @@ def schema_from(stream, mime_type):
   else:
     return None
 
-def schema_from_path(path, myme_type, encoding):
+def schema_from_path(path, mime_type, encoding=None):
   if mime_type is None or mime_type == 'auto':
     mime_type, encoding = mimetypes.guess_type(path)
 

@@ -60,30 +60,30 @@ def schema_from_relation(operation, dataset):
 
 
 
-# Todo:
-# Function -> Relation(Schema, (context-> [Tuples]))
+
+# Function([relation_or_const]) -> Relation(Schema, (context-> [Tuples]))
 def schema_from_function_op(operation, dataset):
   func = dataset.get_function(operation.name)
 
+  # each arg should eithe ber a relation or a constant
+  args = [
+    a if hasattr(a,'schema') else a.const
+    for a in operation.args
+  ]
+
   if hasattr(func, 'resolve'):
-    return func.resolve(dataset)
+    return func.resolve(func, dataset, *args)
 
-  if callable(func.returns):
-    #schema = operation.args[0].schema
-
-    args = [
-      a if hasattr(a,'schema') else a.const
-      for a in operation.args
-    ]
-
+  if isinstance(func.returns, Schema) :
+    schema = func.returns
+  elif callable(func.returns):   
     schema = func.returns(*args)
 
-  else:
-    schema = func.returns
 
+  # records is a partial that applies the args
+  # allong with given ctx to the func when called
   def records(ctx):
     return func(ctx, *args)
-
 
   return Relation(None, operation.name, schema, records)
 
@@ -124,7 +124,7 @@ def schema_from_load(operation, dataset):
 
 def schema_from_projection_op(projection_op, dataset):
   """
-  Given a projection_op, datset and existing schema, return the new
+  Given a projection_op, datset, return the new
   schema.
   """
 
