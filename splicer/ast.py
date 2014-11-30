@@ -260,6 +260,8 @@ class JoinOp(RelationalOp):
     self.bool_op = bool_op
     self.schema = schema
 
+class LeftJoinOp(JoinOp):
+  __slots__ = ('left','right', 'bool_op', 'schema')
 
 class OrderByOp(RelationalOp):
   __slots__ = ('relation', 'exprs', 'schema')

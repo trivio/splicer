@@ -60,8 +60,8 @@ def test_select():
   assert_sequence_equal(
     q.schema.fields, 
     [
-      Field(name="x", type="INTEGER"),
-      Field(name="y", type="INTEGER")
+      Field(name="x", type="INTEGER", schema_name="bogus"),
+      Field(name="y", type="INTEGER", schema_name="bogus")
     ]
   )
 
@@ -76,7 +76,7 @@ def test_select():
   assert_sequence_equal(
     qb_select_y_from_bogus.query.schema.fields, 
     [
-      Field(name="y", type="INTEGER")
+      Field(name="y", type="INTEGER", schema_name="bogus")
     ]
   )
 
@@ -120,7 +120,7 @@ def test_projection_and_selection():
   assert_sequence_equal(
     query.schema.fields, 
     [
-      Field(name="full_name", type="STRING")
+      Field(name="full_name", type="STRING", schema_name="employees")
     ]
   )
 

@@ -18,7 +18,10 @@ class Table(object):
     self.name = name
 
     if isinstance(schema, dict):
-      schema = Schema(**schema)
+      args = schema.copy()
+      if 'name' not in args:
+        args['name'] = name
+      schema = Schema(**args)
     self.schema = schema
 
   @property

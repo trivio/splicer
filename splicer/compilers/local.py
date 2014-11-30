@@ -121,13 +121,12 @@ def join_op(dataset, operation):
   left  = operation.left
   right = operation.right
 
-  schema = JoinSchema(left.schema, right.schema) 
   try:
     comparison = join_keys(left.schema, right.schema, operation.bool_op)
     method = hash_join
   except ValueError:
     # icky cross product
-    comparison = value_expr(operation.bool_op, schema, dataset)
+    comparison = value_expr(operation.bool_op, operation.schema, dataset)
     method = nested_block_join
 
   def join(ctx):
@@ -313,19 +312,17 @@ def column_expr(expr, schema, dataset):
     return (value_expr(expr,schema,dataset),)
 
 def select_all_expr(expr, schema, dataset):
-
   if expr.table is None:
     fields = schema.fields
   else:
-    prefix = expr.table + "."
     fields = [
       f
       for f in schema.fields
-      if f.name.startswith(prefix)
+      if f.schema_name == expr.table
     ]
 
   return [
-    var_expr(Var(f.name), schema, dataset) for f in fields
+    var_expr(Var(f.path), schema, dataset) for f in fields
   ]
 
 def value_expr(expr, schema, dataset):

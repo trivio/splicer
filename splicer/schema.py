@@ -14,7 +14,7 @@ class Schema(ImmutableMixin):
   def __init__(self, fields, name='', **kw):
     self.name = name
     self.fields = [ 
-      field if isinstance(field, Field) else Field(**field) 
+      field if isinstance(field, Field) else Field(schema_name=name,**field) 
       for field in fields
     ]
 
@@ -42,14 +42,36 @@ class Schema(ImmutableMixin):
     return  all([f1 == f2 for f1, f2 in zip(self.fields, other.fields)])
 
   def __getitem__(self, field_name):
-    return self.field_map[field_name]
+    return self.get_field(field_name)
 
   @property
   def field_map(self):
     return self._field_map
+  
 
   def field_position(self, path):
-    return self._field_pos[path]
+    field = self.get_field(path)
+    return self.fields.index(field)
+ 
+  def get_field(self, path):
+    parts = path.rsplit('.',1)
+    if len(parts) == 1:
+      name = parts[0]
+      predicate = lambda f: f.name == name
+    else:
+      schema_name, name = parts
+      predicate = lambda f: f.schema_name == schema_name and f.name == name
+
+    fields = filter(predicate, self.fields)
+
+    if len(fields) == 1:
+      return fields[0]
+    elif len(fields) == 0:
+      raise RuntimeError('No such field "{}"'.format(path))
+    else:
+      raise RuntimeError('Field "{}" is ambigous'.format(path))
+   
+    
 
   def to_dict(self):
     return dict(fields=[f.to_dict() for f in self.fields])
@@ -66,7 +88,6 @@ class JoinSchema(Schema):
       for schema in schemas
       for f in schema.fields
     ]
-
     super(self.__class__,self).__init__(fields)
     # TODO: add field names that don't conflict to _field_pos
     

@@ -2,7 +2,7 @@ from .query import Query, view_replacer
 from .query_builder import QueryBuilder
 from .query_parser import parse_statement
 from .adapters.null_adapter import  NullAdapter
-from .ast import LoadOp, Expr
+from .ast import LoadOp, Expr, AliasOp
 from .aggregate import Aggregate
 from .compilers import local
 
@@ -53,7 +53,7 @@ class DataSet(object):
     else:
       operations = query_or_operations
 
-    self.views[name] = operations
+    self.views[name] = AliasOp(name,operations, operations.schema)
     
   def aggregate(self, returns=None, initial=None, name=None, finalize=None):
     def _(func, name):

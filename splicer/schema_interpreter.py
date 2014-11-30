@@ -136,20 +136,21 @@ def schema_from_projection_op(projection_op, dataset):
     for field in fields_from_expr(expr,dataset,schema)
   ]
 
-  return Schema(fields)
+  return Schema(fields=fields)
 
 
 def schema_from_join_op(join_op, dataset):
   left  =  join_op.left.schema
   right =  join_op.right.schema
-
-  return JoinSchema(left,right)
+  return Schema(fields=left.fields + right.fields)
+  #return JoinSchema(left,right)
 
 
 def schema_from_alias_op(alias_op, dataset):
   schema = alias_op.relation.schema
-  return schema.new(name=alias_op.name)
-
+  name = alias_op.name
+  fields = [f.new(schema_name=name) for f in schema.fields]
+  return schema.new(name=name, fields=fields)
 
 def fields_from_expr(expr, dataset, schema):
   if isinstance(expr, SelectAllExpr):
@@ -194,16 +195,12 @@ def fields_from_select_all(expr, dataset, schema):
   if expr.table is None:
     fields = schema.fields
   else:
-    prefix = expr.table + "."
     fields = [
       f
       for f in schema.fields
-      if f.name.startswith(prefix)
+      if f.schema_name == expr.table
     ]
-
-  return [
-    field_from_var(Var(f.name), schema) for f in fields
-  ]
+  return fields
 
 
 def field_from_const(expr):
@@ -219,7 +216,6 @@ def field_from_const(expr):
 
 def field_from_var(var_expr, schema):
   return schema[var_expr.path]
-
 
 def field_from_function(function_expr, dataset, schema):
   name = function_expr.name
