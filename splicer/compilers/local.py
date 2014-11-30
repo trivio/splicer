@@ -458,6 +458,7 @@ RELATION_OPS = {
   GroupByOp: group_by_op,
   SliceOp: slice_op,
   JoinOp: join_op,
+  LeftJoinOp: join_op,
   Function: relational_function,
   
 }

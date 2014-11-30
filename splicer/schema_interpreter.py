@@ -10,7 +10,7 @@ from .operations import walk, visit_with, is_not
 from .field import Field
 from .ast import (
   ProjectionOp, SelectionOp, GroupByOp, RenameOp, LoadOp,
-  JoinOp,
+  JoinOp, LeftJoinOp,
   Var, Function, 
   Const, UnaryOp, BinaryOp, AliasOp, SelectAllExpr,
   NumberConst, StringConst, BoolConst
@@ -259,6 +259,7 @@ op_type_to_schemas = {
   ProjectionOp: update_op(schema_from_projection_op),
   AliasOp: update_op(schema_from_alias_op),
   JoinOp: update_op(schema_from_join_op),
+  LeftJoinOp: update_op(schema_from_join_op),
   Function: schema_from_function_op,
 
 }
