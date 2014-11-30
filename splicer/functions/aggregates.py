@@ -7,6 +7,20 @@ def init(dataset):
     returns=Field(name="count", type="INTEGER"),
     initial=0
   )
+
+  dataset.add_aggregate(
+    "min",
+    func=min,
+    returns=Field(name="min", type="INTEGER"),
+    initial=float('Inf')
+  )
+
+  dataset.add_aggregate(
+    "max",
+    func=max,
+    returns=Field(name="max", type="INTEGER"),
+    initial=float('-Inf')
+  )
   
   #@dataset.aggregate(returns="INTEGER",initial=0)
   #def count(state):
