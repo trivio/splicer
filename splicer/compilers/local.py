@@ -117,13 +117,14 @@ def selection_op(dataset, operation):
     
   return selection
 
-def join_op(dataset, operation):
+def join_op(left_join, dataset, operation):
   left  = operation.left
   right = operation.right
 
   try:
     comparison = join_keys(left.schema, right.schema, operation.bool_op)
-    method = hash_join
+    # left inner join
+    method = partial(hash_join, left_join)
   except ValueError:
     # icky cross product
     comparison = value_expr(operation.bool_op, operation.schema, dataset)
@@ -457,8 +458,8 @@ RELATION_OPS = {
   OrderByOp: order_by_op,
   GroupByOp: group_by_op,
   SliceOp: slice_op,
-  JoinOp: join_op,
-  LeftJoinOp: join_op,
+  JoinOp: partial(join_op, False),
+  LeftJoinOp: partial(join_op, True),
   Function: relational_function,
   
 }

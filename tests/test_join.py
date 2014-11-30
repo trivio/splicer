@@ -178,7 +178,7 @@ def test_hash_join():
   ctx = {}
 
   comparison = join_keys(SCHEMA_1,SCHEMA_2, simple_op)
-  j = tuple(hash_join(t1,t2, comparison, ctx))
+  j = tuple(hash_join(False,t1,t2, comparison, ctx))
 
   eq_(
     j,
@@ -194,7 +194,7 @@ def test_hash_join():
   )
 
   comparison = join_keys(SCHEMA_1,SCHEMA_2, multi_key)
-  j = tuple(hash_join(t1,t2, comparison, ctx))
+  j = tuple(hash_join(False,t1,t2, comparison, ctx))
 
   eq_(
     j,

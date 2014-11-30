@@ -51,21 +51,26 @@ def nested_block_join(r_op,s_op, comparison, ctx):
           if comparison(row, ctx):
             yield row
 
-def hash_join(r_op,s_op, comparison, ctx):
+def hash_join(left_join, l_op, r_op, comparison, ctx):
   r = r_op(ctx)
   buffer_size = ctx.get('sort_buffer_size', MAX_SIZE) / 2
 
   left_key, right_key = comparison
 
+  if left_join:
+    default = ((None,) * len(r_op.schema.fields),)
+  else:
+    default = ()
+
   for r_block in buffered(r, buffer_size):
     probe = defaultdict(list)
     for row in r_block:
-      probe[left_key(row,ctx)].append(row)
+      probe[right_key(row,ctx)].append(row)
 
-    for s_block in buffered(s_op(ctx), buffer_size):
-      for s_row in s_block:
-        for match in probe.get(right_key(s_row,ctx), ()):
-          yield match + s_row
+    for l_block in buffered(l_op(ctx), buffer_size):
+      for l_row in l_block:
+        for r_row in probe.get(left_key(l_row,ctx), default):
+          yield l_row + r_row 
 
 def join_keys(left_schema, right_schema, op):
   """

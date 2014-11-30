@@ -101,7 +101,7 @@ def test_views():
 
   eq_(
     view,
-    ProjectionOp(LoadOp('bogus'), Var('x'))
+    AliasOp('only_x', ProjectionOp(LoadOp('bogus'), Var('x')))
   )
  
   # create a view off of a view
@@ -109,16 +109,15 @@ def test_views():
 
   view = dataset.get_view('only_x_from_x')
 
-
-  eq_(
+  compare(
     view,
     # Todo: Implement a query optimizer that eliminates
     # redunant projections ops like the one we see below
-    ProjectionOp(
-      ProjectionOp(LoadOp('bogus'), Var('x')),
+    AliasOp('only_x_from_x', ProjectionOp(
+      AliasOp('only_x',ProjectionOp(LoadOp('bogus'), Var('x'))),
       Var('x')
     )
-  )
+  ))
 
 
 def test_replace_views():
@@ -135,12 +134,13 @@ def test_replace_views():
     no_managers
   )
 
-  eq_(
+  view = AliasOp('no_managers', no_managers)
+  compare(
     replace_views(LoadOp('no_managers'), dataset),
-    no_managers
+    view
   )
 
-  eq_(
+  compare(
     replace_views(
       JoinOp(
         LoadOp('no_managers'),
@@ -150,8 +150,8 @@ def test_replace_views():
     ),
 
     JoinOp(
-      no_managers,
-      no_managers
+      view,
+      view
     )
 
   )
@@ -175,14 +175,19 @@ def test_replace_view_within_a_view():
     SelectionOp(LoadOp('view2'), IsOp(Var('x'), NullConst()))
   )
 
-  
+  v1 = replace_views(
+    LoadOp('view3'), 
+    dataset
+  )
+
   compare(
-    replace_views(
-      LoadOp('view3'), 
-      dataset
-    ),
-    SelectionOp(LoadOp('bogus'), IsOp(Var('x'), NullConst()))
-    
+    v1,
+    AliasOp('view3',
+      SelectionOp(
+        AliasOp('view2', AliasOp('view1',LoadOp('bogus'))),
+        IsOp(Var('x'), NullConst())
+      )
+    )
   )
 
 
