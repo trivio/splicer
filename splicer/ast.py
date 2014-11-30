@@ -238,6 +238,8 @@ class AliasOp(RelationalOp):
     self.schema = schema
 
 
+
+
 class ProjectionOp(RelationalOp):
   __slots__ = ('relation', 'exprs', 'schema')
   def __init__(self, relation, *exprs, **kw):
@@ -252,7 +254,25 @@ class SelectionOp(RelationalOp):
     self.bool_op = bool_op
     self.schema = schema
 
-class JoinOp(RelationalOp):
+
+class BinRelationalOp(RelationalOp):
+  """
+  RelationalOp that operates on two relations
+  """
+  __slots__ = ('left', 'right', 'schema')
+
+class UnionAllOp(BinRelationalOp):
+  """Combine the results of multiple operations with identical schemas
+  into one.
+ """
+  __slots__ = ('left', 'right', 'schema')
+  def __init__(self, left, right, schema=None):
+    self.left = left
+    self.right = right
+    self.schema = schema
+
+
+class JoinOp(BinRelationalOp):
   __slots__ = ('left','right', 'bool_op', 'schema')
   def __init__(self,  left, right, bool_op = TrueConst(), schema=None):
     self.left = left

@@ -117,6 +117,18 @@ def selection_op(dataset, operation):
     
   return selection
 
+def union_all_op(dataset, operation):
+
+  def union_all(ctx):
+    for row in operation.left(ctx):
+      yield row
+
+    for row in operation.right(ctx):
+      yield row
+
+  return union_all
+  
+
 def join_op(left_join, dataset, operation):
   left  = operation.left
   right = operation.right
@@ -459,6 +471,7 @@ RELATION_OPS = {
   GroupByOp: group_by_op,
   SliceOp: slice_op,
   JoinOp: partial(join_op, False),
+  UnionAllOp: union_all_op,
   LeftJoinOp: partial(join_op, True),
   Function: relational_function,
   

@@ -10,7 +10,7 @@ from .operations import walk, visit_with, is_not
 from .field import Field
 from .ast import (
   ProjectionOp, SelectionOp, GroupByOp, RenameOp, LoadOp,
-  JoinOp, LeftJoinOp,
+  JoinOp, LeftJoinOp, UnionAllOp,
   Var, Function, 
   Const, UnaryOp, BinaryOp, AliasOp, SelectAllExpr,
   NumberConst, StringConst, BoolConst
@@ -138,6 +138,26 @@ def schema_from_projection_op(projection_op, dataset):
 
   return Schema(fields=fields)
 
+def schema_from_union_all(operation, dataset):
+  l_schema = operation.left.schema
+  r_schema = operation.right.schema
+  if len(l_schema.fields) != len(r_schema.fields):
+    raise RuntimeError(
+      "Schemas from {} and {} must be of the same length.",
+      operation.left.name,
+      operation.right.name
+    )
+  for pos, fields in enumerate(zip(l_schema.fields, r_schema.fields)):
+    left, right = fields
+    if left.type != right.type:
+      raise RuntimeError(
+        "Schemas at position {} have different types {} {}",
+        pos,
+        left.type,
+        right.type
+      )
+
+  return l_schema
 
 def schema_from_join_op(join_op, dataset):
   left  =  join_op.left.schema
@@ -258,6 +278,7 @@ op_type_to_schemas = {
   LoadOp: update_op(schema_from_load),
   ProjectionOp: update_op(schema_from_projection_op),
   AliasOp: update_op(schema_from_alias_op),
+  UnionAllOp: update_op(schema_from_union_all),
   JoinOp: update_op(schema_from_join_op),
   LeftJoinOp: update_op(schema_from_join_op),
   Function: schema_from_function_op,

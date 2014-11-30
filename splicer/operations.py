@@ -4,7 +4,7 @@ from functools import partial
 from zipper import zipper
 
 from . import Relation
-from .ast import LoadOp, JoinOp, EqOp, RelationalOp, Function, Var
+from .ast import LoadOp, EqOp, RelationalOp, Function, Var, BinRelationalOp
 
 
 
@@ -15,7 +15,7 @@ def is_branch(operation):
   return not type(operation) in (Relation, LoadOp)
 
 def children(operation):
-  if isinstance(operation, JoinOp):
+  if isinstance(operation, BinRelationalOp):
     return (operation.left, operation.right)
   elif isinstance(operation, Function):
     return tuple(
@@ -27,7 +27,7 @@ def children(operation):
     return (operation.relation,)
 
 def make_node(operation, children):
-  if isinstance(operation, JoinOp):
+  if isinstance(operation, BinRelationalOp):
     left, right = children
     return operation.new(left=left, right=right)
   elif isinstance(operation, Function):
