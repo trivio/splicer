@@ -18,7 +18,7 @@ def parse(statement, root_exp = None):
   return exp
 
 def parse_statement(statement):
-  return parse(statement, root_exp=select_stmt)
+  return parse(statement, root_exp=union_stmt)
 
 def parse_select(relation, statement):
   columns = parse(
@@ -196,7 +196,7 @@ def var_exp(name, tokens, allowed=string.letters + '_'):
 
 
 # sql specific parsing
-terminators = ('from', 'where', 'limit', 'offset', 'having', 'group', 'order', 'left', 'join', 'on')
+terminators = ('from', 'where', 'limit', 'offset', 'having', 'group', 'order', 'left', 'join', 'on', 'union')
 
 def projection_op(relation, columns):
   if len(columns) == 1 and isinstance(columns[0], SelectAllExpr) and columns[0].table is None:
@@ -393,6 +393,18 @@ def group_by_core_expr(tokens):
       tokens.pop(0)
 
   return columns
+
+def union_stmt(tokens):
+  op = select_stmt(tokens)
+
+  if not tokens:
+    return op
+  elif tokens[0:2] == ["union", "all"]:
+    tokens.pop(0)
+    tokens.pop(0)
+    return UnionAllOp(op, union_stmt(tokens))
+  else:
+    raise SyntaxError('Incomplete statement {}'.format(tokens))
 
 
 def select_stmt(tokens):

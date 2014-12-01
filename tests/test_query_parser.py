@@ -1,4 +1,6 @@
 from nose.tools import *
+from . import compare
+
 from splicer import query_parser
 
 from splicer.ast import *
@@ -314,4 +316,28 @@ def test_table_functions():
 
   eq_(ast,op)
 
+
+def test_union_all():
+  ast = query_parser.parse_statement(''' 
+  select field1, field2 from table1
+  union all
+  select field1, field2 from table2
+  ''')
+
+
+  compare(
+    ast,
+    UnionAllOp(
+      ProjectionOp(
+        LoadOp('table1'),
+        Var('field1'),
+        Var('field2')
+      ),
+      ProjectionOp(
+        LoadOp('table2'),
+        Var('field1'),
+        Var('field2')
+      )
+    )
+  )
 
