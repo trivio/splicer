@@ -3,10 +3,21 @@ import tempfile
 import shutil
 
 from nose.tools import *
+from . import compare
 
+from splicer import Schema
 from splicer.ast import *
 from splicer.operations import query_zipper
 from splicer.adapters.dir_adapter import DirAdapter
+
+
+TEST_SCHEMA = Schema(fields=[
+  dict(type='STRING', name='department'),
+  dict(type='INTEGER', name='id'),
+  dict(type='STRING', name='full_name'),
+  dict(type='INTEGER', name='salary'),
+  dict(type='INTEGER', name='manager_id'),
+])
 
 
 def setup_func():
@@ -19,7 +30,7 @@ def teardown_func():
   try:
     shutil.rmtree(path)
   finally:
-    path =None
+    path = None
 
 
 @with_setup(setup_func, teardown_func)
@@ -39,7 +50,7 @@ def test_evaluate():
   
   res = adapter.evaluate(loc)
 
-  eq_(
+  compare(
     res.root(),
     Function(
       'extract_path',
@@ -57,19 +68,14 @@ def test_query_field_in_payload():
   SelectionOp(Function('decode', Function('extract_path', Function('files'))))
   """
 
+
   adapter = DirAdapter(
     employees = dict(
       root_dir = "/",
       pattern = "{department}",
       filename_column="path",
       decode = "auto",
-      schema = dict(fields=[
-        dict(type='STRING', name='department'),
-        dict(type='INTEGER', name='id'),
-        dict(type='STRING', name='full_name'),
-        dict(type='INTEGER', name='salary'),
-        dict(type='INTEGER', name='manager_id'),
-      ])
+      schema = TEST_SCHEMA
     )
   )
 
@@ -81,9 +87,7 @@ def test_query_field_in_payload():
   res = adapter.evaluate(loc)
   relation = adapter.get_relation('employees')
 
-
- 
-  eq_(
+  compare(
     res.root(),
     SelectionOp(
       Function(
@@ -93,7 +97,10 @@ def test_query_field_in_payload():
           Function('files', Const(relation.root_dir)),
           Const(relation.root_dir + "{department}")
         ),
-        Const('auto')
+        Const('auto'),
+        Const(TEST_SCHEMA),
+        Const('path')
+
       ),
       GeOp(Var('salary'), Const(40000))
     )
@@ -103,7 +110,7 @@ def test_query_field_from_path():
   """
   Queries with SelectionOps that reference only fields
   parsed from the directory structre will rewrite
-  the query so that the file list is filtered before 
+  the query so that the file list is filtered without 
   opening/decoding the files.
   """
 
@@ -113,13 +120,7 @@ def test_query_field_from_path():
       pattern = "{department}",
       filename_column="path",
       decode = "auto",
-      schema = dict(fields=[
-        dict(type='STRING', name='department'),
-        dict(type='INTEGER', name='id'),
-        dict(type='STRING', name='full_name'),
-        dict(type='INTEGER', name='salary'),
-        dict(type='INTEGER', name='manager_id'),
-      ])
+      schema = TEST_SCHEMA
     )
   )
 
@@ -133,7 +134,7 @@ def test_query_field_from_path():
 
   
  
-  eq_(
+  compare(
     res.root(),
     Function(
       'decode',
@@ -145,7 +146,9 @@ def test_query_field_from_path():
         ),
         EqOp(Var('department'), Const('sales'))
       ),
-      Const('auto')
+      Const('auto'),
+      Const(TEST_SCHEMA),
+      Const('path')
     )
   )
 
@@ -190,8 +193,7 @@ def test_query_field_from_path_and_contents():
   relation = adapter.get_relation('employees')
 
   
- 
-  eq_(
+  compare(
     res.root(),
     SelectionOp(  
       Function(
@@ -204,8 +206,32 @@ def test_query_field_from_path_and_contents():
           ),
           EqOp(Var('department'), Const('sales'))
         ),
-        Const('auto')
+        Const('auto'),
+        Const(TEST_SCHEMA),
+        Const('path')
       ),
       GeOp(Var('salary'), Const(40000))
     )
   )
+
+@with_setup(setup_func, teardown_func)
+def test_guess_schema():
+  for department in ('engineering', 'sales', 'marketing'):
+    sub_path = os.path.join(path, department)
+    os.mkdir(sub_path)
+    with open(os.path.join(sub_path, 'data.csv'),'w') as f:
+      f.write('column1, column2, column3\n')
+      for x in range(1000):
+        f.write('a, "b", 1\n')
+
+
+  adapter = DirAdapter(
+    employees = dict(
+      root_dir = path,
+      pattern = "{department}",
+      decode = "auto"
+    )
+  )
+
+  schema = adapter.schema('employees')
+

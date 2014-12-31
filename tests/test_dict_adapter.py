@@ -45,10 +45,10 @@ def test_dict_adapter_with_schemas():
   assert_sequence_equal(
     employees.schema.fields,
     [
-      Field(name="employee_id", type="INTEGER"),
-      Field(name="full_name", type="STRING"),
-      Field(name="employment_date", type="DATE"),
-      Field(name="manager_id", type="INTEGER")  
+      Field(name="employee_id", type="INTEGER", schema_name="employees"),
+      Field(name="full_name", type="STRING", schema_name="employees"),
+      Field(name="employment_date", type="DATE", schema_name="employees"),
+      Field(name="manager_id", type="INTEGER", schema_name="employees")  
     ]
   )
 

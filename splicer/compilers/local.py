@@ -4,65 +4,61 @@ from itertools import islice
 
 from ..ast import *
 
-from ..relation import Relation
-from ..operations import view_replacer, walk
+from ..operations import  walk, visit_with, isa
 from ..schema_interpreter import (
-  field_from_expr, schema_from_projection_op, 
-  schema_from_projection_schema, JoinSchema
+  field_from_expr,  JoinSchema, relational_function
 )
 
 
 def compile(query):
+  # resolve views and schemas
+
   return walk(
     query.operations, 
     visit_with(
-      query.dataset,
-      (isa(LoadOp), view_replacer),
+      query.dataset,      
       (isa(LoadOp), load_relation),
-      (isa(ProjectionOp), projection_op),
+      (isa(ProjectionOp), ensure_group_op_when_ags),
       (isa_op, relational_op),
+      (is_callable, validate_function)
     )
   )
-
-
-def isa(type):
-  def test(loc):
-    return isinstance(loc.node(), type)
-  return test
-
-def visit_with(dataset, *visitors):
-  def visitor(loc):
-    for test,f in visitors:
-      if test(loc):
-        loc = f(dataset, loc, loc.node())
-    return loc
-  return visitor
 
 
 def isa_op(loc):
   return type(loc.node()) in RELATION_OPS
 
 def relational_op(dataset, loc, operation):
-  return loc.replace(RELATION_OPS[type(operation)](dataset,  operation))
+  func = RELATION_OPS[type(operation)](dataset,  operation)
+  func.schema = operation.schema
+  return loc.replace(func)
 
 def load_relation(dataset, loc, operation):
   adapter = dataset.adapter_for(operation.name)
   return adapter.evaluate(loc)
 
+def is_callable(loc):
+  return callable(loc.node())
+
+def validate_function(dataset, loc, function):
+  """
+  Simple validation which ensure that nodes have been
+  compiled to functions have a schema attribute set.
+  """
+  assert hasattr(function, 'schema'), (
+    "{} must have a schema attribute".format(function)
+  )
+  return loc
+
 def alias_op(dataset, operation):
   def alias(ctx):
     relation = operation.relation(ctx)
-    return Relation(
-      relation.schema.new(name=operation.name),
-      iter(relation)
-    )
+    return relation
 
   return alias
 
 
-
-def projection_op(dataset, loc, operation):
-
+def ensure_group_op_when_ags(dataset, loc, operation):
   aggs = aggregates(operation.exprs, dataset)
   if aggs:
     # we have an aggregate operations, push them up to the group by
@@ -76,31 +72,30 @@ def projection_op(dataset, loc, operation):
       loc = loc.replace(GroupByOp(operation, aggregates=aggs)).down()
     else:
       loc = u.replace(parent_op.new(aggregates=aggs)).down()
+  return loc
+
+
+def projection_op(dataset,  operation):
+  schema = operation.relation.schema
+  columns = tuple([
+    column
+    for group in [
+      column_expr(expr, schema, dataset)
+      for expr in operation.exprs
+    ]
+    for column in group
+  ])
 
 
   def projection(ctx):
     relation = operation.relation(ctx)
-    columns = tuple([
-      column
-      for group in [
-        column_expr(expr, relation, dataset)
-        for expr in operation.exprs
-      ]
-      for column in group
-    ])
-
-    schema = schema_from_projection_schema(operation, relation.schema, dataset)
  
-
-    return Relation(
-      schema,
-      (
-        tuple( col(row, ctx) for col in columns )
-        for row in relation
-      )
+    return (
+      tuple( col(row, ctx) for col in columns )
+      for row in relation
     )
-
-  return loc.replace(projection)
+    
+  return projection
 
 
 
@@ -109,80 +104,77 @@ def selection_op(dataset, operation):
   if operation.bool_op is None:
     return lambda relation, ctx: relation
 
+  predicate  = value_expr(operation.bool_op, operation.schema, dataset)
 
   def selection(ctx):
     relation = operation.relation(ctx)
-    predicate  = value_expr(operation.bool_op, relation, dataset)
 
-    return Relation(
-      relation.schema,
-      (
-        row
-        for row in relation
-        if predicate(row, ctx)
-      )
+    return (
+      row
+      for row in relation
+      if predicate(row, ctx)
     )
+    
   return selection
 
-def join_op(dataset, operation):
+def union_all_op(dataset, operation):
+
+  def union_all(ctx):
+    for row in operation.left(ctx):
+      yield row
+
+    for row in operation.right(ctx):
+      yield row
+
+  return union_all
   
+
+def join_op(left_join, dataset, operation):
+  left  = operation.left
+  right = operation.right
+
+  try:
+    comparison = join_keys(left.schema, right.schema, operation.bool_op)
+    # left inner join
+    method = partial(hash_join, left_join)
+  except ValueError:
+    # icky cross product
+    comparison = value_expr(operation.bool_op, operation.schema, dataset)
+    method = nested_block_join
+
   def join(ctx):
     left = operation.left(ctx)
     right = operation.right(ctx)
 
 
-    schema = JoinSchema(left.schema, right.schema) 
-
-    # seems silly to have to build a fake relation
-    # just so var_expr (which is reached by value_expr)
-    # can use the new schema. value_expr should just
-    # take the schema as an arg...
-    bogus = Relation(schema, None)
-
-
-    try:
-      comparison = join_keys(left, right, operation.bool_op)
-      method = hash_join
-    except ValueError:
-      # icky cross product
-      comparison = value_expr(operation.bool_op, bogus, dataset)
-      method = nested_block_join
-
-
-    return Relation(
-      schema,
-      method(operation.left, operation.right, comparison, ctx)
-    )
-
-
+    return method(operation.left, operation.right, comparison, ctx)
+    
   return join
 
 
 
 def order_by_op(dataset, operation):
+  columns = tuple(
+    value_expr(expr, operation.relation.schema, dataset)
+    for expr in operation.exprs
+  )  
+  schema = operation.schema
 
   def order_by(ctx):
     relation = operation.relation(ctx)
 
-    columns = tuple(
-      value_expr(expr, relation, dataset)
-      for expr in operation.exprs
-    )  
-
     def key(row):
       return tuple(c(row, ctx) for c in columns)
 
-    return Relation(
-      relation.schema, 
-      iter(sorted(relation, key=key))
-    )
+    return sorted(relation, key=key)
+    
   return order_by
 
 def group_by_op(dataset, group_op):
 
-
   if group_op.exprs:
     load   = order_by_op(dataset, group_op)
+    load.schema = group_op.schema
   else:
     # we're aggregating the whole table
     load = group_op.relation 
@@ -195,17 +187,16 @@ def group_by_op(dataset, group_op):
   accumalate = accumulate_op(aggs)
   finalize   = finalize_op(aggs)
 
+  if group_op.exprs:
+    key = key_op(group_op.exprs, load.schema)
+  else:
+    # it's all aggregates with no group by elements
+    # so no need to order the table
+    key = lambda row,ctx: None
+
 
   def group_by(ctx):
     ordered_relation = load(ctx)
-    if group_op.exprs:
-      key = key_op(group_op.exprs, ordered_relation.schema)
-    else:
-      # it's all aggregates with no group by elements
-      # so no need to order the table
-      key = lambda row,ctx: None
-
-    schema = ordered_relation.schema
 
     def group():
       records = iter(ordered_relation)
@@ -225,46 +216,19 @@ def group_by_op(dataset, group_op):
 
       yield finalize(record)
 
-    return Relation(
-      schema,
-      group()
-    )
-
-  # note that this method was triggered on ProjectionOp but we're returning the
-  # location of the GroupByOp replaced with the group_by function
-  # which will prevent the ProjectionOp from being inspected 
-  # further.
+    return group()
+    
   return group_by
 
 
 def slice_op(dataset, expr):
   def limit(ctx):
     relation = expr.relation(ctx)
-    return Relation(
-      relation.schema,
-      islice(relation, expr.start, expr.stop)
-    )
+    return islice(relation, expr.start, expr.stop)
+    
   return limit
 
-def relational_function(dataset, op):
-  """Invokes a function that operates on a whole relation"""
-  function = dataset.get_function(op.name)
 
-  args = []
-  for arg_expr in op.args:
-    if isinstance(arg_expr, Const):
-      args.append(lambda ctx, const=arg_expr.const: const)
-    elif callable(arg_expr):
-      args.append(arg_expr)
-    else:
-      raise ValueError(
-        "Only Relational Operations and constants "
-        "are allowed in table functions"
-      )
-
-  def invoke(ctx):
-    return function(*[a(ctx) for a in args])
-  return invoke
 
 def is_aggregate(expr, dataset):
   """Returns true if the expr is an aggregate function."""
@@ -332,7 +296,7 @@ def finalize_op(pos_and_aggs):
     for pos, agg in pos_and_aggs:
       if agg.finalize:
         state = record[pos]
-        record[pos] = agg.function(state, *args)
+        record[pos] = agg.finalize(state)
     return tuple(record)
   return finalize
 
@@ -351,62 +315,59 @@ def aggregates(exprs, dataset):
   )
 
 
-def column_expr(expr, relation, dataset):
+def column_expr(expr, schema, dataset):
   # selectall returns a group of expresions, group solo to be flattened
   # by the outer loop
 
   if isinstance(expr, SelectAllExpr):
-    return select_all_expr(expr, relation, dataset)
+    return select_all_expr(expr, schema, dataset)
   else: 
-    return (value_expr(expr,relation,dataset),)
+    return (value_expr(expr,schema,dataset),)
 
-def select_all_expr(expr, relation, dataset):
-
-  schema = relation.schema
+def select_all_expr(expr, schema, dataset):
   if expr.table is None:
     fields = schema.fields
   else:
-    prefix = expr.table + "."
     fields = [
       f
       for f in schema.fields
-      if f.name.startswith(prefix)
+      if f.schema_name == expr.table
     ]
 
   return [
-    var_expr(Var(f.name), relation, dataset) for f in fields
+    var_expr(Var(f.path), schema, dataset) for f in fields
   ]
 
-def value_expr(expr, relation, dataset):
-  return VALUE_EXPR[type(expr)](expr, relation, dataset)
+def value_expr(expr, schema, dataset):
+  return VALUE_EXPR[type(expr)](expr, schema, dataset)
 
-def itemgetter_expr(expr, relation, dataset):
+def itemgetter_expr(expr, schema, dataset):
   key = expr.key
   def itemgetter(row, ctx):
     return row[key]
   return itemgetter
 
-def sub_expr(expr, relation, dataset):
-  return value_expr(expr.expr, relation, dataset)
+def sub_expr(expr, schema, dataset):
+  return value_expr(expr.expr, schema, dataset)
 
-def var_expr(expr, relation, dataset):
-  pos = relation.schema.field_position(expr.path)
+def var_expr(expr, schema, dataset):
+  pos = schema.field_position(expr.path)
   def var(row, ctx):
     return row[pos]
   return var
 
-def const_expr(expr, relation, dataset):
+def const_expr(expr, schema, dataset):
   def const(row, ctx):
     return expr.const
   return const
 
-def null_expr(expr, relation, dataset):
+def null_expr(expr, schema, dataset):
   return lambda row, ctx: None
 
-def function_expr(expr, relation, dataset):
+def function_expr(expr, schema, dataset):
   function = dataset.get_function(expr.name)
   arg_exprs = tuple(
-    value_expr(arg_expr, relation, dataset)
+    value_expr(arg_expr, schema, dataset)
     for arg_expr in expr.args
   )
 
@@ -420,11 +381,21 @@ def function_expr(expr, relation, dataset):
   _.__name__ = str(expr.name)
   return _
 
+def param_getter_expr(expr, schema, dataset):
+  # todo: params binding are delayed... i.e.
+  # we don't know what they are until after the
+  # query has been parsed. so error checking here
+  # is horrible. Maybe we could introduce a generic type
+  # that is substitude out at the start of query.evaluate
+  pos = expr.expr
+  def get_param(record, ctx):
+    return ctx.get('params', [])[pos]
+  return get_param
 
 
-def desc_expr(expr, relation, dataset):
-  field = field_from_expr(expr.expr, dataset, relation.schema)
-  value = value_expr(expr.expr, relation, dataset)
+def desc_expr(expr, schema, dataset):
+  field = field_from_expr(expr.expr, dataset, schema)
+  value = value_expr(expr.expr, schema, dataset)
 
   if field.type in ("INTEGER", "FLOAT", "DOUBLE"):
 
@@ -440,16 +411,16 @@ def desc_expr(expr, relation, dataset):
   else:
     return lambda r,c: None
  
-def unary_op(operator, expr, relation, dataset):
-  val = value_expr(expr.expr, relation, dataset)
+def unary_op(operator, expr, schema, dataset):
+  val = value_expr(expr.expr, schema, dataset)
   def _(row,ctx):
     return operator(val(row, ctx))
   _.__name__ = operator.__name__
   return _
 
-def binary_op(operator, expr, relation, dataset):
-  lhs = value_expr(expr.lhs, relation, dataset)
-  rhs = value_expr(expr.rhs, relation, dataset)
+def binary_op(operator, expr, schema, dataset):
+  lhs = value_expr(expr.lhs, schema, dataset)
+  rhs = value_expr(expr.rhs, schema, dataset)
 
   def _(row, ctx):
     return operator(lhs(row, ctx), rhs(row, ctx))
@@ -466,6 +437,8 @@ VALUE_EXPR = {
   NullConst: const_expr,
   TrueConst: const_expr,
   FalseConst: const_expr,
+
+  ParamGetterOp: param_getter_expr,
 
   Function: function_expr,
 
@@ -509,7 +482,9 @@ RELATION_OPS = {
   OrderByOp: order_by_op,
   GroupByOp: group_by_op,
   SliceOp: slice_op,
-  JoinOp: join_op,
+  JoinOp: partial(join_op, False),
+  UnionAllOp: union_all_op,
+  LeftJoinOp: partial(join_op, True),
   Function: relational_function,
   
 }

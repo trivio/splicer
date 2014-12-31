@@ -18,7 +18,7 @@ def parse(statement, root_exp = None):
   return exp
 
 def parse_statement(statement):
-  return parse(statement, root_exp=select_stmt)
+  return parse(statement, root_exp=union_stmt)
 
 def parse_select(relation, statement):
   columns = parse(
@@ -196,7 +196,7 @@ def var_exp(name, tokens, allowed=string.letters + '_'):
 
 
 # sql specific parsing
-terminators = ('from', 'where', 'limit', 'offset', 'having', 'group', 'order')
+terminators = ('from', 'where', 'limit', 'offset', 'having', 'group', 'order', 'left', 'join', 'on', 'union')
 
 def projection_op(relation, columns):
   if len(columns) == 1 and isinstance(columns[0], SelectAllExpr) and columns[0].table is None:
@@ -230,6 +230,7 @@ def from_core_exp(tokens):
   return left
 
 def join_core_exp(tokens, left):
+  #Q... this seems to be a dupe of join_source
   load_op = LoadOp(tokens.pop(0))
   if tokens:
     if tokens[0] == 'as':
@@ -245,8 +246,16 @@ def join_core_exp(tokens, left):
 
 def join_source(tokens):
   source = single_source(tokens)
-  while tokens and tokens[0] == ',':
-    tokens.pop(0)
+
+  while tokens and tokens[0] in (',', 'join', 'left'):
+    join_type = tokens.pop(0)
+
+    if join_type == 'left':
+      assert tokens[0] == 'join'
+      tokens.pop(0)
+      op = LeftJoinOp
+    else:
+      op = JoinOp
 
     # if it's a relational function the statement
     # may look like 
@@ -260,9 +269,9 @@ def join_source(tokens):
     right = single_source(tokens)
     if tokens and tokens[0] == 'on':
       tokens.pop(0)
-      source = JoinOp(source, right, and_exp(tokens))
+      source = op(source, right, and_exp(tokens))
     else:
-      source = JoinOp(source, right)
+      source = op(source, right)
 
   return source
 
@@ -384,6 +393,18 @@ def group_by_core_expr(tokens):
       tokens.pop(0)
 
   return columns
+
+def union_stmt(tokens):
+  op = select_stmt(tokens)
+
+  if not tokens:
+    return op
+  elif tokens[0:2] == ["union", "all"]:
+    tokens.pop(0)
+    tokens.pop(0)
+    return UnionAllOp(op, union_stmt(tokens))
+  else:
+    raise SyntaxError('Incomplete statement {}'.format(tokens))
 
 
 def select_stmt(tokens):

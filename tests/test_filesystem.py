@@ -33,7 +33,7 @@ def test_files():
       for track in range(4):
         open(os.path.join(album_path,"{}.ogg".format(track)), 'w')
 
-  songs = files(path)
+  songs = files({}, path)
 
   items = sorted(songs)
 
@@ -53,8 +53,9 @@ def test_files():
 from splicer.path import pattern_regex
 def test_extract_path():
   r = Relation(
+    None, None, #adapter, name, note needed for test
     Schema([dict(type="STRING", name="path")]),
-    iter((
+    lambda ctx: iter((
       ('/Music/Nirvana/Nevermind/Smells Like Teen Spirit.ogg',),
       ('/Videos/Electric Boogaloo.mp4',)
     ))
@@ -62,7 +63,7 @@ def test_extract_path():
 
 
   assert_sequence_equal(
-    list(extract_path(r, "/Music/{artist}/{album}/{track}.{ext}")),
+    list(extract_path({}, r, "/Music/{artist}/{album}/{track}.{ext}")),
     [
       (
         '/Music/Nirvana/Nevermind/Smells Like Teen Spirit.ogg', 
@@ -80,14 +81,16 @@ def test_contents():
   open(p,'w').write('field1,field2\n1,2\n')
 
   r = Relation(
-    Schema([dict(type="STRING", name="path")]),
-    iter((
+    None, None,
+    Schema([dict(type="STRING", name="path")]), 
+    lambda ctx: iter((
       (p,),
     ))
   )
+  
 
   assert_sequence_equal(
-    list(contents(r,  'path')),
+    list(contents({}, r,  'path')),
     [
       (p, 'field1,field2\n1,2\n')
     ]
@@ -98,15 +101,17 @@ def test_decode():
   p = os.path.join(path, 'test.csv')
   open(p,'w').write('field1,field2\n1,2\n')
 
+
   r = Relation(
+    None, None,
     Schema([dict(type="STRING", name="path")]),
-    iter((
+    lambda ctx: iter((
       (p,),
     ))
   )
 
   assert_sequence_equal(
-    list(decode(r, 'auto', 'path')),
+    list(decode({}, r, 0, 'auto')),
     [
       (p, '1', '2')
     ]

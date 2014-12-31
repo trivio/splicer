@@ -1,10 +1,13 @@
 from nose.tools import *
 
 from splicer import DataSet, Table, Query
+from splicer.dataset import replace_views
 from splicer.query_builder import QueryBuilder
 
-from splicer.ast import LoadOp, ProjectionOp, Var
+from splicer.schema import Schema
+from splicer.ast import *
 
+from . import compare
 from .fixtures.mock_adapter import MockAdapter
 
 
@@ -23,6 +26,30 @@ def test_get_relation():
   assert_sequence_equal(
     dataset.relations, 
     [('bogus', s_table)]
+  )
+
+
+def test_get_schema():
+  class Adapter(object):
+    def has(self, name): return name == 'computed'
+
+    def evaluate(self, loc):
+      return loc.replace(Function('myschema'))
+
+  dataset = DataSet()
+  dataset.add_adapter(Adapter())
+
+  # Todo: figure out why I have to invoke this decorator here
+
+  @dataset.function(returns = lambda:Schema([dict(name='field', type='string')]))
+  def myschema(ctx):
+    pass
+
+  schema = dataset.get_schema('computed')
+
+  eq_(
+    schema,
+    Schema([dict(name='field', type='string')])
   )
 
 def test_query_builder():
@@ -65,9 +92,8 @@ def test_query():
 
 def test_views():
   dataset = DataSet()
-  dataset.add_adapter(MockAdapter())
-
-
+  adapter = dataset.add_adapter(MockAdapter())
+  
   # create a view off of an existing table
   dataset.select('x').frm('bogus').create_view('only_x')
 
@@ -75,23 +101,93 @@ def test_views():
 
   eq_(
     view,
-    ProjectionOp(LoadOp('bogus'), Var('x'))
+    AliasOp('only_x', ProjectionOp(LoadOp('bogus'), Var('x')))
   )
-
+ 
   # create a view off of a view
   dataset.select('x').frm('only_x').create_view('only_x_from_x')
 
   view = dataset.get_view('only_x_from_x')
 
-  eq_(
+  compare(
     view,
     # Todo: Implement a query optimizer that eliminates
     # redunant projections ops like the one we see below
-    ProjectionOp(
-      ProjectionOp(LoadOp('bogus'), Var('x')),
+    AliasOp('only_x_from_x', ProjectionOp(
+      AliasOp('only_x',ProjectionOp(LoadOp('bogus'), Var('x'))),
       Var('x')
     )
+  ))
+
+
+def test_replace_views():
+  dataset = DataSet()
+  adapter = dataset.add_adapter(MockAdapter())
+
+  no_managers = SelectionOp(
+    LoadOp('bogus'),
+    IsOp(Var('manager_id'), NullConst())
   )
 
+  dataset.create_view(
+    'no_managers',
+    no_managers
+  )
+
+  view = AliasOp('no_managers', no_managers)
+  compare(
+    replace_views(LoadOp('no_managers'), dataset),
+    view
+  )
+
+  compare(
+    replace_views(
+      JoinOp(
+        LoadOp('no_managers'),
+        LoadOp('no_managers')
+      ),
+      dataset
+    ),
+
+    JoinOp(
+      view,
+      view
+    )
+
+  )
+
+def test_replace_view_within_a_view():
+  dataset = DataSet()
+  adapter = dataset.add_adapter(MockAdapter())
+ 
+  dataset.create_view(
+    'view1',
+    LoadOp('bogus')
+  )
+
+  dataset.create_view(
+    'view2',
+    LoadOp('view1')
+  )
+
+  dataset.create_view(
+    'view3',
+    SelectionOp(LoadOp('view2'), IsOp(Var('x'), NullConst()))
+  )
+
+  v1 = replace_views(
+    LoadOp('view3'), 
+    dataset
+  )
+
+  compare(
+    v1,
+    AliasOp('view3',
+      SelectionOp(
+        AliasOp('view2', AliasOp('view1',LoadOp('bogus'))),
+        IsOp(Var('x'), NullConst())
+      )
+    )
+  )
 
 

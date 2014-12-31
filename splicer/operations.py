@@ -1,9 +1,10 @@
-from functools import partial
+# functions for manipulating operations go here
 
+from functools import partial
 from zipper import zipper
 
-# functions for manipulating operations go here
-from ast import LoadOp, JoinOp, EqOp, RelationalOp, Function, Var
+from . import Relation
+from .ast import LoadOp, EqOp, RelationalOp, Function, Var, BinRelationalOp
 
 
 
@@ -11,10 +12,10 @@ def query_zipper(operation):
   return zipper(operation, is_branch, children, make_node)
 
 def is_branch(operation):
-  return not isinstance(operation, LoadOp)
+  return not type(operation) in (Relation, LoadOp)
 
 def children(operation):
-  if isinstance(operation, JoinOp):
+  if isinstance(operation, BinRelationalOp):
     return (operation.left, operation.right)
   elif isinstance(operation, Function):
     return tuple(
@@ -26,7 +27,7 @@ def children(operation):
     return (operation.relation,)
 
 def make_node(operation, children):
-  if isinstance(operation, JoinOp):
+  if isinstance(operation, BinRelationalOp):
     left, right = children
     return operation.new(left=left, right=right)
   elif isinstance(operation, Function):
@@ -70,21 +71,23 @@ def walk(operation, visitor):
 
   return loc.root()
 
-def view_replacer(dataset, loc, op):
-  view = dataset.get_view(op.name)
-  if view:
-    loc = loc.replace(view).leftmost_descendant()
-  return loc
 
 
-def replace_views(operation, dataset):
-  def adapt(loc):
-    node = loc.node()
-    if isinstance(node, LoadOp):
-      return view_replacer(dataset, loc, node)
-    else:
-      return loc
-  return walk(operation, adapt)
+def isa(type):
+  def test(loc):
+    return isinstance(loc.node(), type)
+  return test
 
+def is_not(type):
+  def test(loc):
+    return not isinstance(loc.node(), type)
+  return test
 
+def visit_with(dataset, *visitors):
+  def visitor(loc):
+    for cond,f in visitors:
+      if cond(loc):
+        loc = f(dataset, loc, loc.node())
+    return loc
+  return visitor
 

@@ -4,14 +4,26 @@ import csv
 from itertools import chain
 
 from ..schema import Schema
-from ..relation import Relation
 from . import decodes
 
+SAMPLE_SIZE = (1024 ** 2) /5
 
 @decodes('text/csv')
-def csv_decoder(stream):
-  sample = stream.read(1024 ** 2)
-  stream.seek(0)
+def csv_decoder(stream, dialect, has_header):
+
+  reader = csv.reader(stream, dialect)
+  if has_header:
+    # skip header, we've read it already during schema
+    next(reader)  
+
+  return reader
+
+
+@csv_decoder.schema
+def csv_schema(stream):
+  pos = stream.tell()
+  sample = stream.read(SAMPLE_SIZE)
+  stream.seek(pos)
   sniffer = csv.Sniffer()
 
 
@@ -33,12 +45,7 @@ def csv_decoder(stream):
     headers = tuple("column_%s" % col for col  in range(len(first_row)) )
     reader = chain([first_row], reader)
   
-  schema = Schema([
+  return Schema([
     dict(name=name, type="STRING")
     for name in headers
-  ])
-
-  return Relation(
-    schema,
-    reader
-   )
+  ]), dialect, has_header

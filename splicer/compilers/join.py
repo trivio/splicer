@@ -51,23 +51,28 @@ def nested_block_join(r_op,s_op, comparison, ctx):
           if comparison(row, ctx):
             yield row
 
-def hash_join(r_op,s_op, comparison, ctx):
+def hash_join(left_join, l_op, r_op, comparison, ctx):
   r = r_op(ctx)
   buffer_size = ctx.get('sort_buffer_size', MAX_SIZE) / 2
 
   left_key, right_key = comparison
 
+  if left_join:
+    default = ((None,) * len(r_op.schema.fields),)
+  else:
+    default = ()
+
   for r_block in buffered(r, buffer_size):
     probe = defaultdict(list)
     for row in r_block:
-      probe[left_key(row,ctx)].append(row)
+      probe[right_key(row,ctx)].append(row)
 
-    for s_block in buffered(s_op(ctx), buffer_size):
-      for s_row in s_block:
-        for match in probe.get(right_key(s_row,ctx), ()):
-          yield match + s_row
+    for l_block in buffered(l_op(ctx), buffer_size):
+      for l_row in l_block:
+        for r_row in probe.get(left_key(l_row,ctx), default):
+          yield l_row + r_row 
 
-def join_keys(left, right, op):
+def join_keys(left_schema, right_schema, op):
   """
   Given two relations that need to be joined and
   a expression, returns two functions for extracting
@@ -82,13 +87,13 @@ def join_keys(left, right, op):
       for f in funcs
     )
 
-  l_key, r_key =  zip(*join_keys_expr(left,right,op))
+  l_key, r_key =  zip(*join_keys_expr(left_schema,right_schema,op))
 
   return partial(key_func, l_key), partial(key_func, r_key) 
 
     
 
-def join_keys_expr(left, right, op):
+def join_keys_expr(left_schema, right_schema, op):
   """
   Rerturn the function for extracting the key values from the expresion
   or  (None,None) if the operation is not an EqOp with two vars.
@@ -111,8 +116,8 @@ def join_keys_expr(left, right, op):
 
   if isinstance(op, And):
     return (
-      join_keys_expr(left, right, op.lhs) 
-      + join_keys_expr(left, right, op.rhs) 
+      join_keys_expr(left_schema, right_schema, op.lhs) 
+      + join_keys_expr(left_schema, right_schema, op.rhs) 
     )
 
   if not isinstance(op, EqOp):
@@ -128,18 +133,18 @@ def join_keys_expr(left, right, op):
   for var in (op.lhs, op.rhs):
     parts = var.path.split('.')
     if len(parts) == 1:
-      if left.schema.field_map.get(parts[0]):
-        cols[0] = var_expr(var, left, None)
-      elif right.schema.field_map.get(parts[0]):
-        cols[1] =  var_expr(var, right, None)
+      if left_schema.field_map.get(parts[0]):
+        cols[0] = var_expr(var, left_schema, None)
+      elif right_schema.field_map.get(parts[0]):
+        cols[1] =  var_expr(var, right_schema, None)
       else:
         raise ValueError('column "{}" does not exist'.format(var.path))
     else:
       relation_name = parts[0]
-      if left.schema.name == relation_name:
-        cols[0] = var_expr(Var(parts[1]), left, None)
-      elif right.schema.name == relation_name:
-        cols[1] = var_expr(Var(parts[1]), right, None)
+      if left_schema.name == relation_name:
+        cols[0] = var_expr(Var(parts[1]), left_schema, None)
+      elif right_schema.name == relation_name:
+        cols[1] = var_expr(Var(parts[1]), right_schema, None)
       else: 
         raise ValueError('relation "{}" does not exist'.format(parts[0]))
 

@@ -1,40 +1,20 @@
-from .schema import Schema
-from .adapters import Adapter
+from collections import namedtuple
 
-class Relation(object):
-  def __init__(self, schema, iterator):
-    """
+from splicer.ast import LoadOp
 
-    Endow an interable with a schema so that's it's suitable
-    to be used as a relation
+class Relation(namedtuple('Relation', 'adapter, name, schema, records')):
+  """
+  Represents a list of tuples
+  """
+  __slots__ = ()
 
-    Args:
-      schema (Schema):  The schema for an iterable
-      iterator (iterator): An iterable object 
+  # equality testing mostly used during unit tests
+  def __eq__(self,other):
+   
+    if isinstance(other, Relation):
+      return self.adapter == other.adapter and self.name == other.name
+    elif isinstance(other, LoadOp):
+      return self.name  == other.name
 
-    """
-
-    self.schema = schema
-    self.iterator = iterator
-
-
-  def __iter__(self):
-    return self.iterator
-
-class NullAdapter(Adapter):
-  def has(self, relation):
-    if relation == '':
-      return True
-
-  def table_scan(self, name, ctx):
-    return NullRelation()
-
-
-# TODO: deprecate this
-class NullRelation(object):
-  """Relation used for queries that don't involve tables"""
-  schema = Schema(name="", fields=[])
-  
-  def __iter__(self):
-    return iter(((),))
-
+  def __call__(self, ctx):
+    return self.records(ctx)

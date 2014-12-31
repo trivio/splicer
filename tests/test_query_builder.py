@@ -1,4 +1,5 @@
 from nose.tools import *
+from . import compare
 
 from splicer import Query, Schema, Field
 from splicer.query_builder import  QueryBuilder
@@ -26,9 +27,6 @@ def test_from_bogus():
   # nev versions
   assert_is_not(qb, qb_w_from)
 
-
-  #eq_(qb_w_from.relation_name, 'bogus')
-
   q  = qb_w_from.query
   assert_is_instance(q, Query)
 
@@ -37,7 +35,7 @@ def test_from_bogus():
     dataset.get_schema('bogus')
   )
 
-  assert_equal(
+  compare(
     q.operations,
     LoadOp('bogus')
   )
@@ -62,12 +60,12 @@ def test_select():
   assert_sequence_equal(
     q.schema.fields, 
     [
-      Field(name="x", type="INTEGER"),
-      Field(name="y", type="INTEGER")
+      Field(name="x", type="INTEGER", schema_name="bogus"),
+      Field(name="y", type="INTEGER", schema_name="bogus")
     ]
   )
 
-  assert_equal(
+  compare(
     q.operations,
     ProjectionOp(LoadOp('bogus'), Var('x'), Var('y'))
   )
@@ -78,11 +76,11 @@ def test_select():
   assert_sequence_equal(
     qb_select_y_from_bogus.query.schema.fields, 
     [
-      Field(name="y", type="INTEGER")
+      Field(name="y", type="INTEGER", schema_name="bogus")
     ]
   )
 
-  assert_equal(
+  compare(
     qb_select_y_from_bogus.query.operations,
     ProjectionOp(LoadOp('bogus'),Var('y'))
   )
@@ -122,7 +120,7 @@ def test_projection_and_selection():
   assert_sequence_equal(
     query.schema.fields, 
     [
-      Field(name="full_name", type="STRING")
+      Field(name="full_name", type="STRING", schema_name="employees")
     ]
   )
 

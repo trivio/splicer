@@ -1,5 +1,5 @@
 import inspect
-
+# TODO: deprecate this in favor of namedtuples
 class ImmutableMixin(object):
   """
   Mixin used to provide immutable object support (kind of).

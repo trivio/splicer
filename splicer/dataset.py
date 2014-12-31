@@ -1,13 +1,16 @@
-from .query import Query
+from .query import Query, view_replacer
 from .query_builder import QueryBuilder
 from .query_parser import parse_statement
-from .relation import NullRelation, NullAdapter
-
+from .adapters.null_adapter import  NullAdapter
+from .ast import LoadOp, Expr, AliasOp
 from .aggregate import Aggregate
 from .compilers import local
+
+from .compilers.local import relational_function
+
 from .field import Field
 
-from .operations import replace_views
+from .operations import walk
 
 from . import functions
 
@@ -42,6 +45,7 @@ class DataSet(object):
 
     if adapter not in self.adapters:
       self.adapters.append(adapter)
+    return adapter
 
   def create_view(self, name, query_or_operations):
     if isinstance(query_or_operations, basestring):
@@ -49,7 +53,7 @@ class DataSet(object):
     else:
       operations = query_or_operations
 
-    self.views[name] = operations
+    self.views[name] = AliasOp(name,operations, operations.schema)
     
   def aggregate(self, returns=None, initial=None, name=None, finalize=None):
     def _(func, name):
@@ -68,7 +72,6 @@ class DataSet(object):
 
 
     """
-
     def _(func, name=name):
       if name is None:
         name = func.__name__
@@ -108,6 +111,8 @@ class DataSet(object):
       raise NameError("No function named {}".format(name))
 
   def get_view(self, name):
+    return self.views.get(name)
+
     view = self.views.get(name)
     if view:
       return replace_views(view,self)
@@ -161,9 +166,17 @@ class DataSet(object):
     The search order is the same as dataset.get_relation()
     """
 
-    return self.get_relation(name).schema
+    return Query(self, LoadOp(name)).schema
+    
+    # schema_or_expr = self.adapter_for(name).schema(name)
+    # if not isinstance(schema_or_expr, Expr):
+    #   return schema_or_expr
+    # else:
+    #   # it's an expression compile it... seems weird
+    #   # that the compile function is 'relational_function'
+    #   func = relational_function(self, schema_or_expr)
+    #   return func({})
 
- 
 
   def set_compiler(self, compile_fun):
     self.compile = compile_fun
@@ -171,8 +184,8 @@ class DataSet(object):
   def set_dump_func(self, dump_func):
     self.dump_func = dump_func
 
-  def dump(self, relation):
-    self.dump_func(relation)
+  def dump(self, schema, relation):
+    self.dump_func(schema, relation)
 
   def execute(self, query, *params):
 
@@ -184,12 +197,6 @@ class DataSet(object):
 
     return callable(ctx)
 
-  def relpace_view(self, op):
-    """
-    Given an operation tree return a new operation tree with 
-    LoadOps that reference views replaced with the operations 
-    of the view.
-    """
 
   def query(self, statement):
     """Parses the statement and returns a Query"""
@@ -200,4 +207,14 @@ class DataSet(object):
 
   def select(self, *cols):
     return QueryBuilder(self).select(*cols)
+
+
+def replace_views(operation, dataset):
+  def adapt(loc):
+    node = loc.node()
+    if isinstance(node, LoadOp):
+      return view_replacer(dataset, loc, node)
+    else:
+      return loc
+  return walk(operation, adapt)
 

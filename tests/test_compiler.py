@@ -8,15 +8,39 @@ from splicer.compilers.local import compile
 
 from .fixtures.employee_adapter import EmployeeAdapter
   
-
-def test_projection():
+def test_union():
   dataset = DataSet()
   dataset.add_adapter(EmployeeAdapter())
 
   q = Query(
     dataset,  
+    UnionAllOp(LoadOp('employees'), LoadOp('employees')) 
+  )
+
+  evaluate = compile(q)
+  assert_sequence_equal(
+    list(evaluate(dict(dataset=dataset))),
+    [
+      (1234, 'Tom Tompson', date(2009, 1, 17), None, ()),
+      (4567, 'Sally Sanders', date(2010, 2, 24), 1234, ()),
+      (8901, 'Mark Markty', date(2010, 3, 1), 1234, ('sales', 'marketing')),
+      (1234, 'Tom Tompson', date(2009, 1, 17), None, ()),
+      (4567, 'Sally Sanders', date(2010, 2, 24), 1234, ()),
+      (8901, 'Mark Markty', date(2010, 3, 1), 1234, ('sales', 'marketing'))
+
+    ]
+  )
+
+
+def test_projection():
+  dataset = DataSet()
+  dataset.add_adapter(EmployeeAdapter())
+  
+  q = Query(
+    dataset,  
     ProjectionOp(LoadOp('employees'), Var('full_name'))
   )
+  
   evaluate = compile(q)
 
   assert_sequence_equal(
@@ -405,5 +429,20 @@ def test_function_in_from():
   )
 
 
+def test_paramgetter():
+  dataset = DataSet()
+  dataset.add_adapter(EmployeeAdapter())
 
+  q = Query(
+    dataset,  
+    ProjectionOp(LoadOp(''), ParamGetterOp(0))
+  )
 
+  evaluate = compile(q)
+
+  assert_sequence_equal(
+    list(evaluate(dict(dataset=dataset, params=('foo',)))),
+    [
+      ('foo',)
+    ]
+  )
