@@ -32,19 +32,20 @@ def set_schema_mimetype(decoder_func, schema_infer_func):
   decoder_func.returns = schema_infer_func
   return decoder_func
 
-def relation_from(stream, mime_type):
+def relation_from(stream, mime_type, additional=[]):
   # todo guess mime_type if not provided
+  
   decoder = decoders_by_mime_type.get(mime_type)
   if decoder:
-    return decoder(stream)
+    return decoder(stream, *additional)
   else:
     return None
 
-def relation_from_path(path, mime_type=None, encoding=None):
+def relation_from_path(path, mime_type, encoding=None, additional=[]):
   if mime_type is None or mime_type == 'auto':
     mime_type, encoding = mimetypes.guess_type(path)
 
-  return relation_from(open(path), mime_type)
+  return relation_from(open(path), mime_type, additional=additional)
 
 
 def schema_from(stream, mime_type):

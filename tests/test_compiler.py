@@ -429,5 +429,20 @@ def test_function_in_from():
   )
 
 
+def test_paramgetter():
+  dataset = DataSet()
+  dataset.add_adapter(EmployeeAdapter())
 
+  q = Query(
+    dataset,  
+    ProjectionOp(LoadOp(''), ParamGetterOp(0))
+  )
 
+  evaluate = compile(q)
+
+  assert_sequence_equal(
+    list(evaluate(dict(dataset=dataset, params=('foo',)))),
+    [
+      ('foo',)
+    ]
+  )

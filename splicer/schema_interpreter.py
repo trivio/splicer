@@ -13,7 +13,7 @@ from .ast import (
   JoinOp, LeftJoinOp, UnionAllOp,
   Var, Function, 
   Const, UnaryOp, BinaryOp, AliasOp, SelectAllExpr,
-  NumberConst, StringConst, BoolConst
+  NumberConst, StringConst, BoolConst, NullConst, ParamGetterOp
 )
 
 
@@ -149,7 +149,7 @@ def schema_from_union_all(operation, dataset):
     )
   for pos, fields in enumerate(zip(l_schema.fields, r_schema.fields)):
     left, right = fields
-    if left.type != right.type:
+    if right.type not in (left.type, 'NULL'):
       raise RuntimeError(
         "Schemas at position {} have different types {} {}",
         pos,
@@ -188,6 +188,8 @@ def field_from_expr(expr, dataset, schema):
     return field_from_var(expr, schema)
   elif issubclass(expr_type, Const):
     return field_from_const(expr)
+  elif issubclass(expr_type, ParamGetterOp):
+    return Field(name ='?column?', type = 'OBJECT')
   elif expr_type == Function:
     return field_from_function(expr, dataset, schema)
   elif expr_type == RenameOp:
@@ -229,7 +231,8 @@ def field_from_const(expr):
     type = {
       NumberConst: 'INTEGER',
       StringConst: 'STRING',
-      BoolConst: 'BOOLEAN'
+      BoolConst: 'BOOLEAN',
+      NullConst: 'NULL'
     }[type(expr)]
   )
 

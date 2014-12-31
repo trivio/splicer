@@ -296,7 +296,7 @@ def finalize_op(pos_and_aggs):
     for pos, agg in pos_and_aggs:
       if agg.finalize:
         state = record[pos]
-        record[pos] = agg.function(state, *args)
+        record[pos] = agg.finalize(state)
     return tuple(record)
   return finalize
 
@@ -381,6 +381,16 @@ def function_expr(expr, schema, dataset):
   _.__name__ = str(expr.name)
   return _
 
+def param_getter_expr(expr, schema, dataset):
+  # todo: params binding are delayed... i.e.
+  # we don't know what they are until after the
+  # query has been parsed. so error checking here
+  # is horrible. Maybe we could introduce a generic type
+  # that is substitude out at the start of query.evaluate
+  pos = expr.expr
+  def get_param(record, ctx):
+    return ctx.get('params', [])[pos]
+  return get_param
 
 
 def desc_expr(expr, schema, dataset):
@@ -427,6 +437,8 @@ VALUE_EXPR = {
   NullConst: const_expr,
   TrueConst: const_expr,
   FalseConst: const_expr,
+
+  ParamGetterOp: param_getter_expr,
 
   Function: function_expr,
 

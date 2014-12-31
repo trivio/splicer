@@ -36,7 +36,7 @@ def contents_schema(relation, path_column, content_column='contents'):
   return Schema(relation.schema.fields + [dict(type='BINARY', name=content_column)])
   
 
-def decode(ctx, relation, path_pos, mime_type):
+def decode(ctx, relation, path_pos, mime_type, additional):
   """
   Takes a relation that has a column which contains a path to a file.
   Returns one row for each row found in each file.
@@ -59,20 +59,23 @@ def decode(ctx, relation, path_pos, mime_type):
 
 
   """
-
+  
   return (
     r + tuple(s)
     for r in relation(ctx)
-    for s in relation_from_path(r[path_pos], mime_type)
+    for s in relation_from_path(r[path_pos], mime_type, additional=additional)
   )
 
 def decode_resolve(func, dataset, relation, mime_type, final_schema, path_column="path"):
 
   path_pos = relation.schema.field_position(path_column)
 
+  res = decode_schema(relation,  path_pos, mime_type)
+  stream_schema, additional = res[0], res[1:]
+
   if not final_schema:
     #  let's guess... note: this is typically a slow operation
-    final_schema = decode_schema(relation,  path_pos, mime_type)
+    final_schema = stream_schema
 
   schema =  Schema(relation.schema.fields + final_schema.fields)
 
@@ -80,7 +83,7 @@ def decode_resolve(func, dataset, relation, mime_type, final_schema, path_column
     None, 
     'decode', 
     schema, 
-    lambda ctx: decode(ctx, relation, path_pos, mime_type)
+    lambda ctx: decode(ctx, relation, path_pos, mime_type, additional=additional)
   )
 
 

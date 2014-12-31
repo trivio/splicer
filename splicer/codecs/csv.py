@@ -6,34 +6,15 @@ from itertools import chain
 from ..schema import Schema
 from . import decodes
 
+SAMPLE_SIZE = (1024 ** 2) /5
 
 @decodes('text/csv')
-def csv_decoder(stream):
-  pos = stream.tell()
-  sample = stream.read(1024 ** 2)
-  
-  #TODO do not modify stream location...
-  stream.seek(pos)
-  sniffer = csv.Sniffer()
-
-
-  #TODO: Remove sniffing if the schema and dialect are already known
-  try:
-    dialect = sniffer.sniff(sample)
-    has_header = sniffer.has_header(sample)
-  except csv.Error:
-    # sniffer has problems detecting single
-    # column csv files
-    has_header = True
-    dialect = csv.excel
+def csv_decoder(stream, dialect, has_header):
 
   reader = csv.reader(stream, dialect)
-  first_row = next(reader)  
   if has_header:
-    headers = first_row
-  else:
-    headers = tuple("column_%s" % col for col  in range(len(first_row)) )
-    reader = chain([first_row], reader)
+    # skip header, we've read it already during schema
+    next(reader)  
 
   return reader
 
@@ -41,8 +22,8 @@ def csv_decoder(stream):
 @csv_decoder.schema
 def csv_schema(stream):
   pos = stream.tell()
-  sample = stream.read(1024 ** 2)
-  stream.seek(0)
+  sample = stream.read(SAMPLE_SIZE)
+  stream.seek(pos)
   sniffer = csv.Sniffer()
 
 
@@ -67,4 +48,4 @@ def csv_schema(stream):
   return Schema([
     dict(name=name, type="STRING")
     for name in headers
-  ])
+  ]), dialect, has_header
