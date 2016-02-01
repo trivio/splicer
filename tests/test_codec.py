@@ -31,17 +31,18 @@ def test_decode_csv():
   stream = StringIO("field1,field2,field3\nfoo,1,0\nbaz,2,0")
 
   schema = codecs.schema_from(stream, mime_type='text/csv')
-  
-  eq_(
-     schema,
-     Schema([
-       Field(name='field1', type='STRING'),
-       Field(name='field2', type='STRING'),
-       Field(name='field3', type='STRING')
-     ])
-  )
+
+  expected = Schema([
+      Field(name='field1', type='STRING'),
+      Field(name='field2', type='STRING'),
+      Field(name='field3', type='STRING')
+  ])
+
+  eq_(schema, expected)
 
 
+def test_decode_csv_relations():
+  stream = StringIO("field1,field2,field3\nfoo,1,0\nbaz,2,0")
   relation = codecs.relation_from(stream, mime_type='text/csv')
 
   assert_sequence_equal(
@@ -51,6 +52,3 @@ def test_decode_csv():
       ['baz','2','0']
     ]
   )
-
-
-

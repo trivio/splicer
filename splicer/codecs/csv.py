@@ -4,12 +4,13 @@ import csv
 from itertools import chain
 
 from ..schema import Schema
+from ..field import Field
 from . import decodes
 
 SAMPLE_SIZE = (1024 ** 2) /5
 
 @decodes('text/csv')
-def csv_decoder(stream, dialect, has_header):
+def csv_decoder(stream, dialect='excel', has_header=True):
 
   reader = csv.reader(stream, dialect)
   if has_header:
@@ -44,8 +45,8 @@ def csv_schema(stream):
   else:
     headers = tuple("column_%s" % col for col  in range(len(first_row)) )
     reader = chain([first_row], reader)
-  
+
   return Schema([
-    dict(name=name, type="STRING")
+    Field(name=name, type="STRING")
     for name in headers
-  ]), dialect, has_header
+  ])

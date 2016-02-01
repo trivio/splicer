@@ -4,7 +4,7 @@ class Field(object):
     'type': "-> string [REQUIRED] integer|float|string|boolean|date|datetime|time|record",
     'mode': "-> string [OPTIONAL] REQUIRED|NULLABLE|REPEATED: default NULLABLE",
     'fields': "-> list [OPTIONAL IF type = RECORD]",
-    'schema_name': "-> strnig [OPTIONAL]"
+    'schema_name': "-> string [OPTIONAL]"
   }
 
   def __init__(self, **attrs):
