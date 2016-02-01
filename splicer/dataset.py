@@ -14,6 +14,8 @@ from .operations import walk
 
 from . import functions
 
+from . import compat
+
 class DataSet(object):
 
   def __init__(self):
@@ -48,7 +50,7 @@ class DataSet(object):
     return adapter
 
   def create_view(self, name, query_or_operations):
-    if isinstance(query_or_operations, basestring):
+    if isinstance(query_or_operations, compat.string_types):
       operations = self.query(query_or_operations).operations
     else:
       operations = query_or_operations

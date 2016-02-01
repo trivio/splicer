@@ -7,7 +7,7 @@ from ..schema import Schema
 from ..field import Field
 from . import decodes
 
-SAMPLE_SIZE = (1024 ** 2) /5
+SAMPLE_SIZE = (1024 ** 2) // 5
 
 @decodes('text/csv')
 def csv_decoder(stream, dialect='excel', has_header=True):

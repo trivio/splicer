@@ -1,13 +1,26 @@
 import operator
 from functools import partial
 from itertools import islice
+import numbers
 
 from ..ast import *
+from .. import compat
 
 from ..operations import  walk, visit_with, isa
 from ..schema_interpreter import (
   field_from_expr,  JoinSchema, relational_function
 )
+
+
+def old_div(a, b):
+    """
+    Equivalent to ``a / b`` on Python 2 without ``from __future__ import
+    division``.
+    """
+    if isinstance(a, numbers.Integral) and isinstance(b, numbers.Integral):
+        return a // b
+    else:
+        return a / b
 
 
 def compile(query):
@@ -164,7 +177,9 @@ def order_by_op(dataset, operation):
     relation = operation.relation(ctx)
 
     def key(row):
-      return tuple(c(row, ctx) for c in columns)
+      return tuple(
+        compat.python2_sort_key(c(row, ctx)) for c in columns
+      )
 
     return sorted(relation, key=key)
     
@@ -201,16 +216,16 @@ def group_by_op(dataset, group_op):
     def group():
       records = iter(ordered_relation)
 
-      row = records.next()
+      row = next(records)
       group = key(row, ctx)
       
       record = accumalate(initialize(row), row)
 
       for row in records:
-        next = key(row, ctx)
-        if next != group:
+        next_ = key(row, ctx)
+        if next_ != group:
           yield finalize(record)
-          group = next
+          group = next_
           record = initialize(row)
         previous_row = accumalate(record, row)
 
@@ -461,7 +476,7 @@ VALUE_EXPR = {
   SubOp: partial(binary_op, operator.sub),
 
   MulOp: partial(binary_op, operator.mul),
-  DivOp: partial(binary_op, operator.div),
+  DivOp: partial(binary_op, old_div),
 
   ItemGetterOp: itemgetter_expr,
 
