@@ -4,7 +4,7 @@ from .ast import (
   SliceOp, JoinOp, LoadOp,
   And, SelectAllExpr
 )
-import query_parser
+from . import query_parser
 
 from .compilers.local import is_aggregate
 
