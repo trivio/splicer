@@ -36,7 +36,7 @@ def contents_schema(relation, path_column, content_column='contents'):
   return Schema(relation.schema.fields + [dict(type='BINARY', name=content_column)])
   
 
-def decode(ctx, relation, path_pos, mime_type, additional):
+def decode(ctx, relation, path_pos, mime_type, additional=None):
   """
   Takes a relation that has a column which contains a path to a file.
   Returns one row for each row found in each file.
@@ -59,6 +59,8 @@ def decode(ctx, relation, path_pos, mime_type, additional):
 
 
   """
+  if additional is None:
+      additional = []
   
   return (
     r + tuple(s)
