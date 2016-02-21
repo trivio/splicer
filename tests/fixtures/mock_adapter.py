@@ -33,7 +33,7 @@ class MockAdapter(Adapter):
     ]
 
   def has(self, name):
-    return self._tables.has_key(name)
+    return name in self._tables
 
   def schema(self, name):
     return self._tables[name].schema    

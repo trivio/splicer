@@ -231,7 +231,7 @@ def rewrite_and_op(partioned_fields,op):
 
 
   return [
-    combine(filter(None,exprs))
+    combine(list(filter(None,exprs)))
     for exprs in zip(lhs, rhs)
   ]
 

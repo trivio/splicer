@@ -118,7 +118,7 @@ class QueryBuilder(object):
 
     if self.qualifiers:
       qualifiers = iter(self.qualifiers)
-      bool_op = query_parser.parse(qualifiers.next())
+      bool_op = query_parser.parse(next(qualifiers))
       for qualifier in qualifiers:
         bool_op = And(bool_op, query_parser.parse(qualifier))
 

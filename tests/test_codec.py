@@ -1,9 +1,9 @@
 from nose.tools import *
 
 from splicer import  Schema, Field,Relation
-from splicer import codecs
+from io import StringIO
 
-from StringIO import StringIO
+from splicer import codecs
 
 def test_register_decoder():
 
@@ -15,7 +15,7 @@ def test_register_decoder():
       for line in stream
     )
 
-  stream = StringIO("blah\nfoo,1\nbaz")
+  stream = StringIO(u"blah\nfoo,1\nbaz")
   relation = codecs.relation_from(stream, mime_type='text/plain')
 
   eq_(
@@ -28,7 +28,7 @@ def test_register_decoder():
   )
 
 def test_decode_csv():
-  stream = StringIO("field1,field2,field3\nfoo,1,0\nbaz,2,0")
+  stream = StringIO(u"field1,field2,field3\nfoo,1,0\nbaz,2,0")
 
   schema = codecs.schema_from(stream, mime_type='text/csv')
 
@@ -42,7 +42,7 @@ def test_decode_csv():
 
 
 def test_decode_csv_relations():
-  stream = StringIO("field1,field2,field3\nfoo,1,0\nbaz,2,0")
+  stream = StringIO(u"field1,field2,field3\nfoo,1,0\nbaz,2,0")
   relation = codecs.relation_from(stream, mime_type='text/csv')
 
   assert_sequence_equal(

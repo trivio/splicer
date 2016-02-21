@@ -183,7 +183,7 @@ def function_exp(name, tokens):
   return Function(name, *args.exprs)
 
 reserved_words = ['is','in']
-def var_exp(name, tokens, allowed=string.letters + '_'):
+def var_exp(name, tokens, allowed=string.ascii_letters + '_'):
   if name in reserved_words:
     raise SyntaxError('invalid syntax')
   path = [name]
