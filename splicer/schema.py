@@ -62,7 +62,7 @@ class Schema(ImmutableMixin):
       schema_name, name = parts
       predicate = lambda f: f.schema_name == schema_name and f.name == name
 
-    fields = filter(predicate, self.fields)
+    fields = list(filter(predicate, self.fields))
 
     if len(fields) == 1:
       return fields[0]

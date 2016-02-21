@@ -1,9 +1,9 @@
 from nose.tools import *
 
 from splicer import  Schema, Field,Relation
-from splicer import codecs
+from io import StringIO
 
-from StringIO import StringIO
+from splicer import codecs
 
 def test_register_decoder():
 
