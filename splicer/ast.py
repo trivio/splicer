@@ -102,6 +102,13 @@ class DivOp(BinaryOp):
   __slots__ = ('lhs', 'rhs')
 
 
+class BetweenOp(BinaryOp):
+  """ x between lhs and rhs"""
+  __slots__ = ( 'expr', 'lhs', 'rhs')
+  def __init__(self, expr, lhs, rhs):
+    self.expr = expr
+    self.lhs  = lhs
+    self.rhs  = rhs
 
 class Const(Expr):
   __slots__ = ('const',)

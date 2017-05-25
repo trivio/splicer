@@ -8,10 +8,16 @@ from .ast import *
 
 
 def parse(statement, root_exp = None):
+  term = set(terminators)
+
   if root_exp is None:
     root_exp = and_exp
 
-  tokens = list(Tokens(statement))
+  tokens = [  
+    token.lower() if token.lower() in term else token
+    for token in Tokens(statement) 
+  ]
+
   exp = root_exp(tokens)
   if tokens: 
     raise SyntaxError('Incomplete statement {}'.format(tokens))
@@ -69,17 +75,29 @@ def or_exp(tokens):
 def comparison_exp(tokens):
   lhs = additive_exp(tokens)
 
-  if len(tokens) and tokens[0] in COMPARISON_OPS:
-    token = tokens.pop(0)
-    if tokens and tokens[0] == 'not':
-      token = 'is not'
+  if len(tokens):
+    if tokens[0] == 'between':
       tokens.pop(0)
+      expr = lhs 
+      lhs = comparison_exp(tokens)
+      if tokens[0] != 'and':
+        raise SyntaxError("missing 'AND' ")
+      tokens.pop(0)
+      rhs = comparison_exp(tokens)
+      return BetweenOp(expr, lhs, rhs)
 
-    Op = COMPARISON_OPS[token]
-    rhs =  additive_exp(tokens)
-    return Op(lhs, rhs)
-  else:
-    return lhs
+    elif tokens[0] in COMPARISON_OPS:
+      token = tokens.pop(0)
+      if tokens and tokens[0] == 'not':
+        token = 'is not'
+        tokens.pop(0)
+
+      Op = COMPARISON_OPS[token]
+      rhs =  additive_exp(tokens)
+      return Op(lhs, rhs)
+
+  # otherwise
+  return lhs
 
 def additive_exp(tokens):
   lhs = multiplicative_exp(tokens)
@@ -196,9 +214,29 @@ def var_exp(name, tokens, allowed=string.ascii_letters + '_'):
 
 
 # sql specific parsing
-terminators = ('from', 'where', 'limit', 'offset', 'having', 'group', 'order', 'left', 'join', 'on', 'union')
+terminators = ('from',
+ 'where',
+ 'limit',
+ 'offset',
+ 'having',
+ 'group',
+ 'order',
+ 'left',
+ 'join',
+ 'on',
+ 'union',
 
-def projection_op(relation, columns):
+'in',
+'is',
+'and',
+'or',
+'select',
+'between',
+'not'
+ )
+
+def projection_op(relation,
+ columns):
   if len(columns) == 1 and isinstance(columns[0], SelectAllExpr) and columns[0].table is None:
     return relation
   else:
