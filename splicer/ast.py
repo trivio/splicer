@@ -84,6 +84,10 @@ class IsNotOp(BinaryOp):
   """x is not y"""
   __slots__ = ('lhs', 'rhs')
 
+class InOp(BinaryOp):
+  """x is y"""
+  __slots__ = ('lhs', 'rhs')
+
 
 class AddOp(BinaryOp):
   """lhs + rhs"""
@@ -181,7 +185,8 @@ COMPARISON_OPS = {
   '>=' : GeOp,
   '>'  : GtOp,
   'is' : IsOp,
-  'is not' : IsNotOp
+  'is not' : IsNotOp,
+
 }
 
 

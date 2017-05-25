@@ -86,6 +86,20 @@ def comparison_exp(tokens):
       rhs = comparison_exp(tokens)
       return BetweenOp(expr, lhs, rhs)
 
+    elif tokens[0:2] == ['in', '(']:
+
+      tokens.pop(0)
+      tokens.pop(0)
+      return InOp(lhs, tuple_exp(tokens))
+
+    elif tokens[0:3] == ['not','in', '(']:
+
+      tokens.pop(0)
+      tokens.pop(0)
+      tokens.pop(0)
+      return NotOp(InOp(lhs, tuple_exp(tokens)))
+
+
     elif tokens[0] in COMPARISON_OPS:
       token = tokens.pop(0)
       if tokens and tokens[0] == 'not':
