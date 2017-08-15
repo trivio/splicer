@@ -84,7 +84,6 @@ class IsNotOp(BinaryOp):
   """x is not y"""
   __slots__ = ('lhs', 'rhs')
 
-<<<<<<< HEAD
 class LikeOp(BinaryOp):
   """x LIKE y"""
   __slots__ = ('lhs', 'rhs')
@@ -92,12 +91,10 @@ class LikeOp(BinaryOp):
 class RLikeOp(BinaryOp):
   """x RLIKE y"""
   __slots__ = ('lhs', 'rhs')
-=======
+
 class InOp(BinaryOp):
   """x is y"""
   __slots__ = ('lhs', 'rhs')
-
->>>>>>> ece5793aaa34f65d8d3a2d586ad1a11920101091
 
 class AddOp(BinaryOp):
   """lhs + rhs"""
