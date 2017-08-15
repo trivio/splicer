@@ -238,6 +238,37 @@ def test_parse_is_null():
     IsOp(Var('x'), NullConst())
   )
 
+def test_between():
+  ast = query_parser.parse('x  between 1 and 2')
+  eq_(
+    ast,
+    BetweenOp(Var('x'),  NumberConst(1), NumberConst(2) )
+  )
+
+
+  ast = query_parser.parse("x  between '1' and '2'")
+
+  eq_(
+    ast,
+    BetweenOp(Var('x'),  StringConst('1'), StringConst('2') )
+  )
+
+def test_in():
+  ast = query_parser.parse('x in (1, 2)')
+
+  eq_(
+    ast,
+    InOp(Var('x'),  Tuple(NumberConst(1), NumberConst(2) ))
+  )
+
+def test_not_in():
+  ast = query_parser.parse('x not in (1, 2)')
+
+  eq_(
+    ast,
+    NotOp(InOp(Var('x'),  Tuple(NumberConst(1), NumberConst(2))))
+  )
+
 
 def test_parse_itemgetter():
   ast = query_parser.parse('$0')
