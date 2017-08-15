@@ -52,7 +52,7 @@ def parse_group_by(statement):
 
 
 
-def and_exp(tokens):    
+def and_exp(tokens):
   lhs = or_exp(tokens) 
   while len(tokens) and tokens[0] == 'and':
     tokens.pop(0)
@@ -69,13 +69,13 @@ def or_exp(tokens):
 def comparison_exp(tokens):
   lhs = additive_exp(tokens)
 
-  if len(tokens) and tokens[0] in COMPARISON_OPS:
+  if len(tokens) and tokens[0].lower() in COMPARISON_OPS:
     token = tokens.pop(0)
     if tokens and tokens[0] == 'not':
       token = 'is not'
       tokens.pop(0)
 
-    Op = COMPARISON_OPS[token]
+    Op = COMPARISON_OPS[token.lower()]
     rhs =  additive_exp(tokens)
     return Op(lhs, rhs)
   else:
@@ -149,6 +149,8 @@ def value_exp(tokens):
     return StringConst(token[1:-1])
   elif token == '(':
     return tuple_exp(tokens)
+  elif token.lower() == 'case':
+    return case_when_core_exp(tokens)
   #elif token in SYMBOLS: 
   #  return lambda row, ctx: token
   else:
@@ -181,6 +183,31 @@ def function_exp(name, tokens):
 
   args = tuple_exp(tokens)
   return Function(name, *args.exprs)
+
+def case_when_core_exp(tokens):
+  all_conditions = []
+  token = tokens.pop(0).lower()
+  if token != 'when':
+    raise SyntaxError('Expected "WHEN"')
+  while token == 'when':
+    condition = and_exp(tokens)
+    token = tokens.pop(0).lower()
+    if token != 'then':
+      raise SyntaxError('Expected "THEN"')
+    expr = and_exp(tokens)
+    condition_map = dict(
+      condition=condition,
+      expr=expr
+    )
+    all_conditions.append(condition_map)
+    token = tokens.pop(0).lower()
+  if token != 'else':
+    raise SyntaxError('Expected "ELSE"')
+  def_value = and_exp(tokens)
+  token=tokens.pop(0).lower()
+  if token != 'end':
+    raise SyntaxError('Expected "END"')
+  return CaseWhenOp(all_conditions, def_value)
 
 reserved_words = ['is','in']
 def var_exp(name, tokens, allowed=string.ascii_letters + '_'):
