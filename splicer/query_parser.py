@@ -180,6 +180,8 @@ def value_exp(tokens):
     return tuple_exp(tokens)
   elif token.lower() == 'case':
     return case_when_core_exp(tokens)
+  elif token.lower() == 'cast':
+    return cast_core_exp(tokens)
   #elif token in SYMBOLS: 
   #  return lambda row, ctx: token
   else:
@@ -212,6 +214,22 @@ def function_exp(name, tokens):
 
   args = tuple_exp(tokens)
   return Function(name, *args.exprs)
+
+
+def cast_core_exp(tokens):
+  token = tokens.pop(0)
+  if token != '(':
+    raise SyntaxError('Expected "("')
+  value = and_exp(tokens)
+  token = tokens.pop(0)
+  if token.lower() != 'as':
+    raise SyntaxError('Expected "AS"')
+  type = and_exp(tokens)
+  token = tokens.pop(0)
+  if token != ')':
+    raise SyntaxError('Expected ")"')
+  return CastOp(value, type)
+
 
 def case_when_core_exp(tokens):
   all_conditions = []

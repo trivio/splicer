@@ -5,6 +5,17 @@ from splicer import query_parser
 
 from splicer.ast import *
 
+def test_cast_op():
+  statement = "CAST({column} AS BIGINT)"
+  statement = statement.replace('{', '')
+  statement = statement.replace('}', '')
+  ast = query_parser.parse(statement)
+
+  assert_is_instance(ast, CastOp)
+  assert_is_instance(ast.value, Var)
+
+
+
 def test_single_case_when_1():
   statement = "CASE WHEN {column} = '' THEN {column} ELSE CONCAT('CMC', {column}) END"
   statement = statement.replace('{', '')

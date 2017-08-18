@@ -280,6 +280,12 @@ class CaseWhenOp(RelationalOp):
     self.conditions = conditions
     self.default_value = default_value
 
+class CastOp(RelationalOp):
+  __slots__ = ('value', 'type')
+  def __init__(self, value, type):
+    self.value = value
+    self.type = type
+
 
 class BinRelationalOp(RelationalOp):
   """
