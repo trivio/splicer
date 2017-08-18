@@ -12,8 +12,8 @@ def test_cast_op():
   ast = query_parser.parse(statement)
 
   assert_is_instance(ast, CastOp)
-  assert_is_instance(ast.value, Var)
-  eq_(ast.value.path, 'column')
+  assert_is_instance(ast.expr, Var)
+  eq_(ast.expr.path, 'column')
   eq_(ast.type, 'BIGINT')
 
 

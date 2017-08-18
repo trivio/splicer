@@ -220,7 +220,7 @@ def cast_core_exp(tokens):
   token = tokens.pop(0)
   if token != '(':
     raise SyntaxError('Expected "("')
-  value = and_exp(tokens)
+  expr = and_exp(tokens)
   token = tokens.pop(0)
   if token.lower() != 'as':
     raise SyntaxError('Expected "AS"')
@@ -228,7 +228,7 @@ def cast_core_exp(tokens):
   token = tokens.pop(0)
   if token != ')':
     raise SyntaxError('Expected ")"')
-  return CastOp(value, type)
+  return CastOp(expr, type)
 
 
 def case_when_core_exp(tokens):

@@ -281,9 +281,9 @@ class CaseWhenOp(RelationalOp):
     self.default_value = default_value
 
 class CastOp(RelationalOp):
-  __slots__ = ('value', 'type')
-  def __init__(self, value, type):
-    self.value = value
+  __slots__ = ('expr', 'type')
+  def __init__(self, expr, type):
+    self.expr = expr
     self.type = type
 
 
