@@ -88,6 +88,12 @@ class LikeOp(BinaryOp):
   """x LIKE y"""
   __slots__ = ('lhs', 'rhs')
 
+
+class NotLikeOp(BinaryOp):
+  """x LIKE y"""
+  __slots__ = ('lhs', 'rhs')
+
+
 class RLikeOp(BinaryOp):
   """x RLIKE y"""
   __slots__ = ('lhs', 'rhs')
@@ -194,7 +200,8 @@ COMPARISON_OPS = {
   'is' : IsOp,
   'is not' : IsNotOp,
   'like' : LikeOp,
-  'rlike': RLikeOp
+  'rlike': RLikeOp,
+  'not like' : NotLikeOp
 }
 
 

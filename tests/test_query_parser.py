@@ -6,9 +6,7 @@ from splicer import query_parser
 from splicer.ast import *
 
 def test_cast_op():
-  statement = "CAST({column} AS BIGINT)"
-  statement = statement.replace('{', '')
-  statement = statement.replace('}', '')
+  statement = "CAST(column AS BIGINT)"
   ast = query_parser.parse(statement)
 
   assert_is_instance(ast, CastOp)
@@ -19,9 +17,8 @@ def test_cast_op():
 
 
 def test_single_case_when_1():
-  statement = "CASE WHEN {column} = '' THEN {column} ELSE CONCAT('CMC', {column}) END"
-  statement = statement.replace('{', '')
-  statement = statement.replace('}', '')
+  statement = "CASE WHEN column = '' THEN column ELSE CONCAT('CMC', column) END"
+
   ast = query_parser.parse(statement)
 
   assert_is_instance(ast, CaseWhenOp)
@@ -36,9 +33,8 @@ def test_single_case_when_1():
   eq_(ast.default_value.args[1].path, 'column')
 
 def test_single_case_when_2():
-  statement = "CASE WHEN {column} LIKE 'true' THEN 1 ELSE 0 END"
-  statement = statement.replace('{', '')
-  statement = statement.replace('}', '')
+  statement = "CASE WHEN column LIKE 'true' THEN 1 ELSE 0 END"
+
   ast = query_parser.parse(statement)
   assert_is_instance(ast, CaseWhenOp)
   assert_is_instance(ast.default_value, Const)
@@ -47,9 +43,8 @@ def test_single_case_when_2():
   eq_(ast.default_value.const, 0)
 
 def test_single_case_when_3():
-  statement = "CASE WHEN {column} != '' THEN MD5(LOWER({column})) ELSE '' END"
-  statement = statement.replace('{', '')
-  statement = statement.replace('}', '')
+  statement = "CASE WHEN column != '' THEN MD5(LOWER(column)) ELSE '' END"
+
   ast = query_parser.parse(statement)
   assert_is_instance(ast, CaseWhenOp)
   assert_is_instance(ast.default_value, Const)
@@ -65,12 +60,11 @@ def test_single_case_when_3():
 
 def test_single_case_when_4():
   statement = "CASE " \
-              " WHEN {column} != '' " \
-              " THEN REFLECT('org.apache.commons.codec.digest.DigestUtils', 'shaHex', LOWER({column})) " \
+              " WHEN column != '' " \
+              " THEN REFLECT('org.apache.commons.codec.digest.DigestUtils', 'shaHex', LOWER(column)) " \
               " ELSE '' " \
               "END"
-  statement = statement.replace('{', '')
-  statement = statement.replace('}', '')
+
   ast = query_parser.parse(statement)
   assert_is_instance(ast, CaseWhenOp)
   assert_is_instance(ast.default_value, Const)
@@ -90,11 +84,10 @@ def test_single_case_when_4():
 
 def test_single_case_when_5():
   statement = "CASE " \
-              " WHEN {column} RLIKE '^\\d\\d\\d\\d$' THEN {column} " \
+              " WHEN column RLIKE '^\\d\\d\\d\\d$' THEN column " \
               " ELSE '' " \
               "END"
-  statement = statement.replace('{', '')
-  statement = statement.replace('}', '')
+
   ast = query_parser.parse(statement)
   assert_is_instance(ast, CaseWhenOp)
   assert_is_instance(ast.default_value, Const)
@@ -107,13 +100,12 @@ def test_single_case_when_5():
 
 def test_multiple_case_when():
   statement = "CASE " \
-                " WHEN {column} = '' THEN {column} " \
-                " WHEN {column} = 'a' THEN {column_a} " \
-                " WHEN {column} = 'b' THEN {column_b} " \
-                " ELSE CONCAT('CMC', {column}) " \
+                " WHEN column = '' THEN column " \
+                " WHEN column = 'a' THEN column_a " \
+                " WHEN column = 'b' THEN column_b " \
+                " ELSE CONCAT('CMC', column) " \
                 "END"
-  statement = statement.replace('{', '')
-  statement = statement.replace('}', '')
+
   ast = query_parser.parse(statement)
 
   assert_is_instance(ast, CaseWhenOp)
@@ -136,6 +128,19 @@ def test_multiple_case_when():
   eq_(ast.default_value.name, 'CONCAT')
   eq_(ast.default_value.args[0].const, 'CMC')
   eq_(ast.default_value.args[1].path, 'column')
+
+
+
+def test_more_case_when():
+  statement = """CASE
+  WHEN
+      (LOWER(x) not in ('blah', 'foo', 'baz'))
+      AND (y not like 'pattern%' OR LOWER(zz) != 'hoo ha')
+  THEN 1
+  ELSE 0
+END"""
+  ast = query_parser.parse(statement)
+  assert_is_instance(ast, CaseWhenOp)
 
 def test_parse_int():
   ast = query_parser.parse('123')

@@ -75,6 +75,13 @@ def or_exp(tokens):
 def comparison_exp(tokens):
   lhs = additive_exp(tokens)
   if len(tokens):
+    
+    if tokens[0:2] == ['not','like']:
+      tokens.pop(0)
+      tokens.pop(0)
+      tokens.insert(0, 'not like')
+
+
     if tokens[0] == 'between':
       tokens.pop(0)
       expr = lhs 
@@ -84,6 +91,8 @@ def comparison_exp(tokens):
       tokens.pop(0)
       rhs = comparison_exp(tokens)
       return BetweenOp(expr, lhs, rhs)
+
+
     elif tokens[0:2] == ['in', '(']:
 
       tokens.pop(0)
@@ -97,9 +106,12 @@ def comparison_exp(tokens):
       tokens.pop(0)
       return NotOp(InOp(lhs, tuple_exp(tokens)))
 
+
+
     elif tokens[0].lower() in COMPARISON_OPS:
       token = tokens.pop(0)
       if tokens and tokens[0] == 'not':
+
         token = 'is not'
         tokens.pop(0)
 
