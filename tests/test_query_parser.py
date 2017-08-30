@@ -142,6 +142,39 @@ END"""
   ast = query_parser.parse(statement)
   assert_is_instance(ast, CaseWhenOp)
 
+  statement = """
+  CASE
+        WHEN event_prop14 like '%.pdf' or event_prop33 like '%.pdf' THEN  'Whitepaper Download'
+        WHEN event_prop13 = 'liveball/us/bsd/form/initiated' THEN 'Contact Us'
+        WHEN (event_cust24=1 or event_cust16=1 or event_cust33=1 or event_cust34=1) and product_in_evar24 != '' THEN 'Videos'
+        WHEN event_prop34='en.community.dell.com/support-forums' THEN 'Training / Tutorials / Education'
+        WHEN event_cust38 = 1 or event_cust39 = 1 or event_cust40 = 1 THEN 'Chat'
+    END
+  """
+  ast = query_parser.parse(statement)
+  assert_is_instance(ast, CaseWhenOp)
+
+  ast = query_parser.parse("""
+    CASE
+    WHEN  LOWER(pagename) rlike '.*(:laptops|notebook|:intel_laptops|:notebook-finder|:laptops-v2|:new-envy|:.*spectre|:features|:elite|:back-to-business|:.*notebook|:tab:|:hp notebooks|:business notebooks|:notebook).*' or LOWER(channel) rlike '(hhos:laptops|pps|hhos:static|hhos:business|cs:premium:laptops|csf:en:notebooks:notebook software and how to questions|cs:ads:elite-products|cs:products:laptops|csf:en:notebooks|cs:ads:elitex3|csf:en:notebooks:business notebooks|csf:en:notebooks)'
+    THEN 'personal_computers'
+  END
+  """)
+  ast = query_parser.parse(statement)
+  assert_is_instance(ast, CaseWhenOp)
+
+  query_parser.parse("""
+  CASE WHEN cast(
+  (CASE WHEN coalesce(amount, '') = '' THEN '0' 
+  ELSE amount END) AS DOUBLE) > 5000.0 THEN 1 ELSE 0 END
+
+
+  """)
+
+def test_parse_not_rlike():
+  query_parser.parse("c_company NOT RLIKE '^MA'")
+   
+
 def test_parse_int():
   ast = query_parser.parse('123')
   assert_is_instance(ast, NumberConst)
@@ -163,6 +196,11 @@ def test_parse_positive_int():
   ast = query_parser.parse('+1')
   assert_is_instance(ast, NumberConst)
   eq_(ast.const, 1)
+
+def test_parse_float():
+  ast = query_parser.parse('123.1')
+  assert_is_instance(ast, NumberConst)
+  eq_(ast.const, 123.1)
 
 
 def test_parse_mul():

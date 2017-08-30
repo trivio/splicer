@@ -76,10 +76,15 @@ def comparison_exp(tokens):
   lhs = additive_exp(tokens)
   if len(tokens):
     
-    if tokens[0:2] == ['not','like']:
+    if [t.lower() for t in tokens[0:2]] == ['not','like']:
       tokens.pop(0)
       tokens.pop(0)
       tokens.insert(0, 'not like')
+
+    if [t.lower() for t in tokens[0:2]] == ['not','rlike']:
+      tokens.pop(0)
+      tokens.pop(0)
+      tokens.insert(0, 'not rlike')
 
 
     if tokens[0] == 'between':
