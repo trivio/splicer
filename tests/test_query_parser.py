@@ -5,6 +5,138 @@ from splicer import query_parser
 
 from splicer.ast import *
 
+def test_cast_op():
+  statement = "CAST({column} AS BIGINT)"
+  statement = statement.replace('{', '')
+  statement = statement.replace('}', '')
+  ast = query_parser.parse(statement)
+
+  assert_is_instance(ast, CastOp)
+  assert_is_instance(ast.expr, Var)
+  eq_(ast.expr.path, 'column')
+  eq_(ast.type, 'BIGINT')
+
+
+
+def test_single_case_when_1():
+  statement = "CASE WHEN {column} = '' THEN {column} ELSE CONCAT('CMC', {column}) END"
+  statement = statement.replace('{', '')
+  statement = statement.replace('}', '')
+  ast = query_parser.parse(statement)
+
+  assert_is_instance(ast, CaseWhenOp)
+  assert_is_instance(ast.default_value, Function)
+  assert_is_instance(ast.conditions[0]['condition'], EqOp)
+  assert_is_instance(ast.conditions[0]['expr'], Var)
+  eq_(ast.conditions[0]['condition'].lhs.path, 'column')
+  eq_(ast.conditions[0]['condition'].rhs.const, '')
+  eq_(ast.conditions[0]['expr'].path, 'column')
+  eq_(ast.default_value.name, 'CONCAT')
+  eq_(ast.default_value.args[0].const, 'CMC')
+  eq_(ast.default_value.args[1].path, 'column')
+
+def test_single_case_when_2():
+  statement = "CASE WHEN {column} LIKE 'true' THEN 1 ELSE 0 END"
+  statement = statement.replace('{', '')
+  statement = statement.replace('}', '')
+  ast = query_parser.parse(statement)
+  assert_is_instance(ast, CaseWhenOp)
+  assert_is_instance(ast.default_value, Const)
+  assert_is_instance(ast.conditions[0]['condition'], LikeOp)
+  assert_is_instance(ast.conditions[0]['expr'], Const)
+  eq_(ast.default_value.const, 0)
+
+def test_single_case_when_3():
+  statement = "CASE WHEN {column} != '' THEN MD5(LOWER({column})) ELSE '' END"
+  statement = statement.replace('{', '')
+  statement = statement.replace('}', '')
+  ast = query_parser.parse(statement)
+  assert_is_instance(ast, CaseWhenOp)
+  assert_is_instance(ast.default_value, Const)
+  assert_is_instance(ast.conditions[0]['condition'], NeOp)
+  assert_is_instance(ast.conditions[0]['expr'], Function)
+  eq_(ast.conditions[0]['condition'].lhs.path, 'column')
+  eq_(ast.conditions[0]['condition'].rhs.const, '')
+  eq_(ast.conditions[0]['expr'].name, 'MD5')
+  assert_is_instance(ast.conditions[0]['expr'].args[0], Function)
+  eq_(ast.conditions[0]['expr'].args[0].name, 'LOWER')
+  eq_(ast.conditions[0]['expr'].args[0].args[0].path, 'column')
+  eq_(ast.default_value.const, '')
+
+def test_single_case_when_4():
+  statement = "CASE " \
+              " WHEN {column} != '' " \
+              " THEN REFLECT('org.apache.commons.codec.digest.DigestUtils', 'shaHex', LOWER({column})) " \
+              " ELSE '' " \
+              "END"
+  statement = statement.replace('{', '')
+  statement = statement.replace('}', '')
+  ast = query_parser.parse(statement)
+  assert_is_instance(ast, CaseWhenOp)
+  assert_is_instance(ast.default_value, Const)
+  assert_is_instance(ast.conditions[0]['condition'], NeOp)
+  assert_is_instance(ast.conditions[0]['expr'], Function)
+  eq_(ast.conditions[0]['condition'].lhs.path, 'column')
+  eq_(ast.conditions[0]['condition'].rhs.const, '')
+  eq_(ast.default_value.const, '')
+  eq_(ast.conditions[0]['expr'].name, 'REFLECT')
+  assert_is_instance(ast.conditions[0]['expr'].args[0], Const)
+  assert_is_instance(ast.conditions[0]['expr'].args[1], Const)
+  assert_is_instance(ast.conditions[0]['expr'].args[2], Function)
+  eq_(ast.conditions[0]['expr'].args[0].const, 'org.apache.commons.codec.digest.DigestUtils')
+  eq_(ast.conditions[0]['expr'].args[1].const, 'shaHex')
+  eq_(ast.conditions[0]['expr'].args[2].name, 'LOWER')
+  eq_(ast.conditions[0]['expr'].args[2].args[0].path, 'column')
+
+def test_single_case_when_5():
+  statement = "CASE " \
+              " WHEN {column} RLIKE '^\\d\\d\\d\\d$' THEN {column} " \
+              " ELSE '' " \
+              "END"
+  statement = statement.replace('{', '')
+  statement = statement.replace('}', '')
+  ast = query_parser.parse(statement)
+  assert_is_instance(ast, CaseWhenOp)
+  assert_is_instance(ast.default_value, Const)
+  assert_is_instance(ast.conditions[0]['condition'], RLikeOp)
+  eq_(ast.conditions[0]['condition'].lhs.path, 'column')
+  eq_(ast.conditions[0]['condition'].rhs.const, '^\\d\\d\\d\\d$')
+  eq_(ast.conditions[0]['expr'].path, 'column')
+  eq_(ast.default_value.const, '')
+
+
+def test_multiple_case_when():
+  statement = "CASE " \
+                " WHEN {column} = '' THEN {column} " \
+                " WHEN {column} = 'a' THEN {column_a} " \
+                " WHEN {column} = 'b' THEN {column_b} " \
+                " ELSE CONCAT('CMC', {column}) " \
+                "END"
+  statement = statement.replace('{', '')
+  statement = statement.replace('}', '')
+  ast = query_parser.parse(statement)
+
+  assert_is_instance(ast, CaseWhenOp)
+  assert_is_instance(ast.default_value, Function)
+  assert_is_instance(ast.conditions[0]['condition'], EqOp)
+  assert_is_instance(ast.conditions[0]['expr'], Var)
+  assert_is_instance(ast.conditions[1]['condition'], EqOp)
+  assert_is_instance(ast.conditions[1]['expr'], Var)
+  assert_is_instance(ast.conditions[2]['condition'], EqOp)
+  assert_is_instance(ast.conditions[2]['expr'], Var)
+  eq_(ast.conditions[0]['condition'].lhs.path, 'column')
+  eq_(ast.conditions[0]['condition'].rhs.const, '')
+  eq_(ast.conditions[1]['condition'].lhs.path, 'column')
+  eq_(ast.conditions[1]['condition'].rhs.const, 'a')
+  eq_(ast.conditions[2]['condition'].lhs.path, 'column')
+  eq_(ast.conditions[2]['condition'].rhs.const, 'b')
+  eq_(ast.conditions[0]['expr'].path, 'column')
+  eq_(ast.conditions[1]['expr'].path, 'column_a')
+  eq_(ast.conditions[2]['expr'].path, 'column_b')
+  eq_(ast.default_value.name, 'CONCAT')
+  eq_(ast.default_value.args[0].const, 'CMC')
+  eq_(ast.default_value.args[1].path, 'column')
+
 def test_parse_int():
   ast = query_parser.parse('123')
   assert_is_instance(ast, NumberConst)
