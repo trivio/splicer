@@ -102,6 +102,11 @@ class RLikeOp(BinaryOp):
   """x RLIKE y"""
   __slots__ = ('lhs', 'rhs')
 
+class RegExpOp(BinaryOp):
+  """x RLIKE y"""
+  __slots__ = ('lhs', 'rhs')
+
+
 class InOp(BinaryOp):
   """x is y"""
   __slots__ = ('lhs', 'rhs')
@@ -206,7 +211,8 @@ COMPARISON_OPS = {
   'like' : LikeOp,
   'rlike': RLikeOp,
   'not like' : NotLikeOp,
-  'not rlike' : NotRLikeOp
+  'not rlike' : NotRLikeOp,
+  'regexp': RegExpOp
 
 }
 
