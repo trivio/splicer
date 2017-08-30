@@ -248,10 +248,11 @@ def cast_core_exp(tokens):
 
 def case_when_core_exp(tokens):
   all_conditions = []
-  token = tokens.pop(0).lower()
-  if token != 'when':
+
+  if  tokens[0].lower()  != 'when':
     raise SyntaxError('Expected "WHEN"')
-  while token == 'when':
+  while tokens and  tokens[0].lower() == 'when':
+    token = tokens.pop(0).lower()
     condition = and_exp(tokens)
     token = tokens.pop(0).lower()
     if token != 'then':
@@ -262,10 +263,12 @@ def case_when_core_exp(tokens):
       expr=expr
     )
     all_conditions.append(condition_map)
-    token = tokens.pop(0).lower()
-  if token != 'else':
-    raise SyntaxError('Expected "ELSE"')
-  def_value = and_exp(tokens)
+  
+  if tokens[0].lower() == 'else':
+    tokens.pop(0)
+    def_value = and_exp(tokens)
+  else:
+    def_value = None
   token=tokens.pop(0).lower()
   if token != 'end':
     raise SyntaxError('Expected "END"')
