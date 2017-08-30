@@ -185,7 +185,11 @@ def value_exp(tokens):
   elif token == 'null':
     return NullConst()
   elif token[0] in string.digits:
-    return NumberConst(int(token))
+    if tokens and tokens[0] == '.':
+      value = float(token + tokens.pop(0) + tokens.pop(0))
+    else:
+      value = int(token)
+    return NumberConst(value)
   elif token[0] in ("'",'"'):
     return StringConst(token[1:-1])
   elif token == '(':
