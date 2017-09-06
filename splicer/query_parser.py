@@ -315,7 +315,9 @@ terminators = ('from',
 'or',
 'select',
 'between',
-'not'
+'not',
+
+')'
  )
 
 def projection_op(relation,
@@ -366,26 +368,21 @@ def join_core_exp(tokens, left):
   return JoinOp(left, load_op)
 
 def join_source(tokens):
-  source = single_source(tokens)
 
+  source = single_source(tokens)
+    
   while tokens and tokens[0] in (',', 'join', 'left'):
+
     join_type = tokens.pop(0)
 
     if join_type == 'left':
+      if tokens[0] == 'outer':
+        tokens.pop(0)
       assert tokens[0] == 'join'
       tokens.pop(0)
       op = LeftJoinOp
     else:
       op = JoinOp
-
-    # if it's a relational function the statement
-    # may look like 
-    # select ... from func(select * from foo, 'some constant')
-    # we use the fact that there's something other than a 
-    # Var to end the statement... Feels hacky
-    expr = value_exp(tokens[:1])
-    if not isinstance(expr, Var):
-       break
 
     right = single_source(tokens)
     if tokens and tokens[0] == 'on':
@@ -402,27 +399,35 @@ def single_source(tokens):
     if tokens[0] == 'select':
       source = select_stmt(tokens)
       #if tokens[0] != ',':
-      if tokens and tokens[0] not in terminators:
-        if tokens[0] == 'as':
-          tokens.pop(0)
-        alias = tokens.pop(0)
-        source = AliasOp(alias, source)
     else:
       source = join_source(tokens)
 
     if tokens[0] != ')':
       raise SyntaxError('Expected ")"')
-      return source
     else:
       tokens.pop(0)
+
+
+    if tokens and tokens[0] not in ',' and tokens[0] not in terminators:
+      if tokens[0] == 'as':
+        tokens.pop(0)
+      alias = tokens.pop(0)
+      source = AliasOp(alias, source)
+
+    return source
   else:
 
     if tokens[1:2] == ['(']:
       source = relation_function_exp(tokens.pop(0), tokens)
     else:
-      source = LoadOp(tokens.pop(0))
+      if tokens[:2][-1] == '.':
+        name = tokens.pop(0) + tokens.pop(0) + tokens.pop(0)
+      else:
+        name = tokens.pop(0)
 
-    if tokens and tokens[0] != ',' and tokens[0] not in terminators:
+      source = LoadOp(name)
+
+    if tokens and tokens[0] not in ',' and tokens[0] not in terminators:
       if tokens[0] == 'as':
         tokens.pop(0)
       alias = tokens.pop(0)
@@ -431,6 +436,7 @@ def single_source(tokens):
 
 
 def relation_function_exp(name, tokens):
+
   token = tokens.pop(0)
   if token != '(':
     raise SyntaxError("Expecting '('")
@@ -438,8 +444,10 @@ def relation_function_exp(name, tokens):
   args = []
 
   while tokens and tokens[0] != ")":
-    if tokens[0] == 'select':
-      args.append(select_stmt(tokens))
+    if tokens[0] == '(':
+
+
+      args.append(  single_source(tokens))
     else:
       expr = value_exp(tokens)
       if isinstance(expr, Var):
