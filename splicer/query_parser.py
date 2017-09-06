@@ -303,6 +303,7 @@ terminators = ('from',
  'offset',
  'having',
  'group',
+ 'by',
  'order',
  'left',
  'join',
@@ -559,7 +560,9 @@ def select_stmt(tokens):
   
   relation =  projection_op(relation, select_core)
 
+
   if tokens[:2] == ['group', 'by']:
+    
     tokens.pop(0)
     tokens.pop(0)
   
