@@ -309,6 +309,7 @@ terminators = ('from',
  'join',
  'on',
  'union',
+ 'outer',
 
 'in',
 'is',

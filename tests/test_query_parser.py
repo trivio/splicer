@@ -171,9 +171,14 @@ END"""
 
   """)
 
+
+
 def test_parse_not_rlike():
   query_parser.parse("c_company NOT RLIKE '^MA'")
    
+def test_parse_regexp():
+  ast = query_parser.parse("name REGEXP '^nana.*|^ipad.*|^np\..*|^internal.*'")
+  assert_is_instance(ast, RegExpOp)
 
 def test_parse_int():
   ast = query_parser.parse('123')
@@ -201,6 +206,11 @@ def test_parse_float():
   ast = query_parser.parse('123.1')
   assert_is_instance(ast, NumberConst)
   eq_(ast.const, 123.1)
+
+
+def test_reseved():
+  ast = query_parser.parse('`reserved`')
+  assert_is_instance(ast, Var)
 
 
 def test_parse_mul():
@@ -464,7 +474,7 @@ def test_parse_statement():
   ast = query_parser.parse_statement('''
     select manager_id, count() from 
     employees
-    group by manager_id
+    group BY manager_id
   ''')
 
   ast = query_parser.parse_statement('''
@@ -504,8 +514,22 @@ def test_parse_statement():
   ''')
 
 
+def test_left_join():
+  ast = query_parser.parse_statement(''' 
+  SELECT *
+  FROM company_raw
+    JOIN (
+        SELECT MAX(dt) dt FROM company_raw
+    ) max_dt ON company_raw.dt = max_dt.dt
+
+     LEFT JOIN geonames.distinct_alternate_country_name countries
+         ON TRIM(UPPER(company_raw.country)) = TRIM(UPPER(countries.alternate_name))
+   ''')
+
 def test_table_functions():
 
+
+  # TODO: figure out if this is valid syntax
   ast = query_parser.parse_statement(''' 
   select *
   from flatten(docs, 'scripts')
@@ -515,10 +539,12 @@ def test_table_functions():
 
   eq_(ast,op)
 
+
   ast = query_parser.parse_statement(''' 
   select *
-  from flatten(select * from docs, "scripts")
+  from flatten( (select * from docs), "scripts")
   ''')
+
 
   eq_(ast,op)
 
