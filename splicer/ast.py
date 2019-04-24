@@ -84,6 +84,32 @@ class IsNotOp(BinaryOp):
   """x is not y"""
   __slots__ = ('lhs', 'rhs')
 
+class LikeOp(BinaryOp):
+  """x LIKE y"""
+  __slots__ = ('lhs', 'rhs')
+
+
+class NotLikeOp(BinaryOp):
+  """x LIKE y"""
+  __slots__ = ('lhs', 'rhs')
+
+class NotRLikeOp(BinaryOp):
+  """x Not RLIKE y"""
+  __slots__ = ('lhs', 'rhs')
+
+
+class RLikeOp(BinaryOp):
+  """x RLIKE y"""
+  __slots__ = ('lhs', 'rhs')
+
+class RegExpOp(BinaryOp):
+  """x RLIKE y"""
+  __slots__ = ('lhs', 'rhs')
+
+
+class InOp(BinaryOp):
+  """x is y"""
+  __slots__ = ('lhs', 'rhs')
 
 class AddOp(BinaryOp):
   """lhs + rhs"""
@@ -102,6 +128,13 @@ class DivOp(BinaryOp):
   __slots__ = ('lhs', 'rhs')
 
 
+class BetweenOp(BinaryOp):
+  """ x between lhs and rhs"""
+  __slots__ = ( 'expr', 'lhs', 'rhs')
+  def __init__(self, expr, lhs, rhs):
+    self.expr = expr
+    self.lhs  = lhs
+    self.rhs  = rhs
 
 class Const(Expr):
   __slots__ = ('const',)
@@ -174,7 +207,13 @@ COMPARISON_OPS = {
   '>=' : GeOp,
   '>'  : GtOp,
   'is' : IsOp,
-  'is not' : IsNotOp
+  'is not' : IsNotOp,
+  'like' : LikeOp,
+  'rlike': RLikeOp,
+  'not like' : NotLikeOp,
+  'not rlike' : NotRLikeOp,
+  'regexp': RegExpOp
+
 }
 
 
@@ -253,6 +292,18 @@ class SelectionOp(RelationalOp):
     self.relation = relation
     self.bool_op = bool_op
     self.schema = schema
+
+class CaseWhenOp(RelationalOp):
+  __slots__ = ('conditions', 'default_value')
+  def __init__(self, conditions, default_value):
+    self.conditions = conditions
+    self.default_value = default_value
+
+class CastOp(RelationalOp):
+  __slots__ = ('expr', 'type')
+  def __init__(self, expr, type):
+    self.expr = expr
+    self.type = type
 
 
 class BinRelationalOp(RelationalOp):

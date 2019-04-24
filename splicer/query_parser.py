@@ -8,10 +8,16 @@ from .ast import *
 
 
 def parse(statement, root_exp = None):
+  term = set(terminators)
+
   if root_exp is None:
     root_exp = and_exp
 
-  tokens = list(Tokens(statement))
+  tokens = [  
+    token.lower() if token.lower() in term else token
+    for token in Tokens(statement) 
+  ]
+
   exp = root_exp(tokens)
   if tokens: 
     raise SyntaxError('Incomplete statement {}'.format(tokens))
@@ -52,7 +58,7 @@ def parse_group_by(statement):
 
 
 
-def and_exp(tokens):    
+def and_exp(tokens):
   lhs = or_exp(tokens) 
   while len(tokens) and tokens[0] == 'and':
     tokens.pop(0)
@@ -68,18 +74,58 @@ def or_exp(tokens):
   
 def comparison_exp(tokens):
   lhs = additive_exp(tokens)
-
-  if len(tokens) and tokens[0] in COMPARISON_OPS:
-    token = tokens.pop(0)
-    if tokens and tokens[0] == 'not':
-      token = 'is not'
+  if len(tokens):
+    
+    if [t.lower() for t in tokens[0:2]] == ['not','like']:
       tokens.pop(0)
+      tokens.pop(0)
+      tokens.insert(0, 'not like')
 
-    Op = COMPARISON_OPS[token]
-    rhs =  additive_exp(tokens)
-    return Op(lhs, rhs)
-  else:
-    return lhs
+    if [t.lower() for t in tokens[0:2]] == ['not','rlike']:
+      tokens.pop(0)
+      tokens.pop(0)
+      tokens.insert(0, 'not rlike')
+
+
+    if tokens[0] == 'between':
+      tokens.pop(0)
+      expr = lhs 
+      lhs = comparison_exp(tokens)
+      if tokens[0] != 'and':
+        raise SyntaxError("missing 'AND' ")
+      tokens.pop(0)
+      rhs = comparison_exp(tokens)
+      return BetweenOp(expr, lhs, rhs)
+
+
+    elif tokens[0:2] == ['in', '(']:
+
+      tokens.pop(0)
+      tokens.pop(0)
+      return InOp(lhs, tuple_exp(tokens))
+
+    elif tokens[0:3] == ['not','in', '(']:
+
+      tokens.pop(0)
+      tokens.pop(0)
+      tokens.pop(0)
+      return NotOp(InOp(lhs, tuple_exp(tokens)))
+
+
+
+    elif tokens[0].lower() in COMPARISON_OPS:
+      token = tokens.pop(0)
+      if tokens and tokens[0] == 'not':
+
+        token = 'is not'
+        tokens.pop(0)
+
+      Op = COMPARISON_OPS[token.lower()]
+      rhs =  additive_exp(tokens)
+      return Op(lhs, rhs)
+
+  # otherwise
+  return lhs
 
 def additive_exp(tokens):
   lhs = multiplicative_exp(tokens)
@@ -144,11 +190,19 @@ def value_exp(tokens):
   elif token == 'null':
     return NullConst()
   elif token[0] in string.digits:
-    return NumberConst(int(token))
+    if tokens and tokens[0] == '.':
+      value = float(token + tokens.pop(0) + tokens.pop(0))
+    else:
+      value = int(token)
+    return NumberConst(value)
   elif token[0] in ("'",'"'):
     return StringConst(token[1:-1])
   elif token == '(':
     return tuple_exp(tokens)
+  elif token.lower() == 'case':
+    return case_when_core_exp(tokens)
+  elif token.lower() == 'cast':
+    return cast_core_exp(tokens)
   #elif token in SYMBOLS: 
   #  return lambda row, ctx: token
   else:
@@ -182,6 +236,53 @@ def function_exp(name, tokens):
   args = tuple_exp(tokens)
   return Function(name, *args.exprs)
 
+
+def cast_core_exp(tokens):
+  token = tokens.pop(0)
+  if token != '(':
+    raise SyntaxError('Expected "("')
+  expr = and_exp(tokens)
+  token = tokens.pop(0)
+  if token.lower() != 'as':
+    raise SyntaxError('Expected "AS"')
+  if tokens[1] != ')':
+    type = and_exp(tokens)
+  else:
+    type = tokens.pop(0)
+  token = tokens.pop(0)
+  if token != ')':
+    raise SyntaxError('Expected ")"')
+  return CastOp(expr, type)
+
+
+def case_when_core_exp(tokens):
+  all_conditions = []
+
+  if  tokens[0].lower()  != 'when':
+    raise SyntaxError('Expected "WHEN"')
+  while tokens and  tokens[0].lower() == 'when':
+    token = tokens.pop(0).lower()
+    condition = and_exp(tokens)
+    token = tokens.pop(0).lower()
+    if token != 'then':
+      raise SyntaxError('Expected "THEN"')
+    expr = and_exp(tokens)
+    condition_map = dict(
+      condition=condition,
+      expr=expr
+    )
+    all_conditions.append(condition_map)
+  
+  if tokens[0].lower() == 'else':
+    tokens.pop(0)
+    def_value = and_exp(tokens)
+  else:
+    def_value = None
+  token=tokens.pop(0).lower()
+  if token != 'end':
+    raise SyntaxError('Expected "END"')
+  return CaseWhenOp(all_conditions, def_value)
+
 reserved_words = ['is','in']
 def var_exp(name, tokens, allowed=string.ascii_letters + '_'):
   if name in reserved_words:
@@ -196,9 +297,33 @@ def var_exp(name, tokens, allowed=string.ascii_letters + '_'):
 
 
 # sql specific parsing
-terminators = ('from', 'where', 'limit', 'offset', 'having', 'group', 'order', 'left', 'join', 'on', 'union')
+terminators = ('from',
+ 'where',
+ 'limit',
+ 'offset',
+ 'having',
+ 'group',
+ 'by',
+ 'order',
+ 'left',
+ 'join',
+ 'on',
+ 'union',
+ 'outer',
 
-def projection_op(relation, columns):
+'in',
+'is',
+'and',
+'or',
+'select',
+'between',
+'not',
+
+')'
+ )
+
+def projection_op(relation,
+ columns):
   if len(columns) == 1 and isinstance(columns[0], SelectAllExpr) and columns[0].table is None:
     return relation
   else:
@@ -245,26 +370,21 @@ def join_core_exp(tokens, left):
   return JoinOp(left, load_op)
 
 def join_source(tokens):
-  source = single_source(tokens)
 
+  source = single_source(tokens)
+    
   while tokens and tokens[0] in (',', 'join', 'left'):
+
     join_type = tokens.pop(0)
 
     if join_type == 'left':
+      if tokens[0] == 'outer':
+        tokens.pop(0)
       assert tokens[0] == 'join'
       tokens.pop(0)
       op = LeftJoinOp
     else:
       op = JoinOp
-
-    # if it's a relational function the statement
-    # may look like 
-    # select ... from func(select * from foo, 'some constant')
-    # we use the fact that there's something other than a 
-    # Var to end the statement... Feels hacky
-    expr = value_exp(tokens[:1])
-    if not isinstance(expr, Var):
-       break
 
     right = single_source(tokens)
     if tokens and tokens[0] == 'on':
@@ -281,27 +401,35 @@ def single_source(tokens):
     if tokens[0] == 'select':
       source = select_stmt(tokens)
       #if tokens[0] != ',':
-      if tokens and tokens[0] not in terminators:
-        if tokens[0] == 'as':
-          tokens.pop(0)
-        alias = tokens.pop(0)
-        source = AliasOp(alias, source)
     else:
       source = join_source(tokens)
 
     if tokens[0] != ')':
       raise SyntaxError('Expected ")"')
-      return source
     else:
       tokens.pop(0)
+
+
+    if tokens and tokens[0] not in ',' and tokens[0] not in terminators:
+      if tokens[0] == 'as':
+        tokens.pop(0)
+      alias = tokens.pop(0)
+      source = AliasOp(alias, source)
+
+    return source
   else:
 
     if tokens[1:2] == ['(']:
       source = relation_function_exp(tokens.pop(0), tokens)
     else:
-      source = LoadOp(tokens.pop(0))
+      if tokens[:2][-1] == '.':
+        name = tokens.pop(0) + tokens.pop(0) + tokens.pop(0)
+      else:
+        name = tokens.pop(0)
 
-    if tokens and tokens[0] != ',' and tokens[0] not in terminators:
+      source = LoadOp(name)
+
+    if tokens and tokens[0] not in ',' and tokens[0] not in terminators:
       if tokens[0] == 'as':
         tokens.pop(0)
       alias = tokens.pop(0)
@@ -310,6 +438,7 @@ def single_source(tokens):
 
 
 def relation_function_exp(name, tokens):
+
   token = tokens.pop(0)
   if token != '(':
     raise SyntaxError("Expecting '('")
@@ -317,8 +446,10 @@ def relation_function_exp(name, tokens):
   args = []
 
   while tokens and tokens[0] != ")":
-    if tokens[0] == 'select':
-      args.append(select_stmt(tokens))
+    if tokens[0] == '(':
+
+
+      args.append(  single_source(tokens))
     else:
       expr = value_exp(tokens)
       if isinstance(expr, Var):
@@ -430,7 +561,9 @@ def select_stmt(tokens):
   
   relation =  projection_op(relation, select_core)
 
+
   if tokens[:2] == ['group', 'by']:
+    
     tokens.pop(0)
     tokens.pop(0)
   

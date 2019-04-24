@@ -5,6 +5,181 @@ from splicer import query_parser
 
 from splicer.ast import *
 
+def test_cast_op():
+  statement = "CAST(column AS BIGINT)"
+  ast = query_parser.parse(statement)
+
+  assert_is_instance(ast, CastOp)
+  assert_is_instance(ast.expr, Var)
+  eq_(ast.expr.path, 'column')
+  eq_(ast.type, 'BIGINT')
+
+
+
+def test_single_case_when_1():
+  statement = "CASE WHEN column = '' THEN column ELSE CONCAT('CMC', column) END"
+
+  ast = query_parser.parse(statement)
+
+  assert_is_instance(ast, CaseWhenOp)
+  assert_is_instance(ast.default_value, Function)
+  assert_is_instance(ast.conditions[0]['condition'], EqOp)
+  assert_is_instance(ast.conditions[0]['expr'], Var)
+  eq_(ast.conditions[0]['condition'].lhs.path, 'column')
+  eq_(ast.conditions[0]['condition'].rhs.const, '')
+  eq_(ast.conditions[0]['expr'].path, 'column')
+  eq_(ast.default_value.name, 'CONCAT')
+  eq_(ast.default_value.args[0].const, 'CMC')
+  eq_(ast.default_value.args[1].path, 'column')
+
+def test_single_case_when_2():
+  statement = "CASE WHEN column LIKE 'true' THEN 1 ELSE 0 END"
+
+  ast = query_parser.parse(statement)
+  assert_is_instance(ast, CaseWhenOp)
+  assert_is_instance(ast.default_value, Const)
+  assert_is_instance(ast.conditions[0]['condition'], LikeOp)
+  assert_is_instance(ast.conditions[0]['expr'], Const)
+  eq_(ast.default_value.const, 0)
+
+def test_single_case_when_3():
+  statement = "CASE WHEN column != '' THEN MD5(LOWER(column)) ELSE '' END"
+
+  ast = query_parser.parse(statement)
+  assert_is_instance(ast, CaseWhenOp)
+  assert_is_instance(ast.default_value, Const)
+  assert_is_instance(ast.conditions[0]['condition'], NeOp)
+  assert_is_instance(ast.conditions[0]['expr'], Function)
+  eq_(ast.conditions[0]['condition'].lhs.path, 'column')
+  eq_(ast.conditions[0]['condition'].rhs.const, '')
+  eq_(ast.conditions[0]['expr'].name, 'MD5')
+  assert_is_instance(ast.conditions[0]['expr'].args[0], Function)
+  eq_(ast.conditions[0]['expr'].args[0].name, 'LOWER')
+  eq_(ast.conditions[0]['expr'].args[0].args[0].path, 'column')
+  eq_(ast.default_value.const, '')
+
+def test_single_case_when_4():
+  statement = "CASE " \
+              " WHEN column != '' " \
+              " THEN REFLECT('org.apache.commons.codec.digest.DigestUtils', 'shaHex', LOWER(column)) " \
+              " ELSE '' " \
+              "END"
+
+  ast = query_parser.parse(statement)
+  assert_is_instance(ast, CaseWhenOp)
+  assert_is_instance(ast.default_value, Const)
+  assert_is_instance(ast.conditions[0]['condition'], NeOp)
+  assert_is_instance(ast.conditions[0]['expr'], Function)
+  eq_(ast.conditions[0]['condition'].lhs.path, 'column')
+  eq_(ast.conditions[0]['condition'].rhs.const, '')
+  eq_(ast.default_value.const, '')
+  eq_(ast.conditions[0]['expr'].name, 'REFLECT')
+  assert_is_instance(ast.conditions[0]['expr'].args[0], Const)
+  assert_is_instance(ast.conditions[0]['expr'].args[1], Const)
+  assert_is_instance(ast.conditions[0]['expr'].args[2], Function)
+  eq_(ast.conditions[0]['expr'].args[0].const, 'org.apache.commons.codec.digest.DigestUtils')
+  eq_(ast.conditions[0]['expr'].args[1].const, 'shaHex')
+  eq_(ast.conditions[0]['expr'].args[2].name, 'LOWER')
+  eq_(ast.conditions[0]['expr'].args[2].args[0].path, 'column')
+
+def test_single_case_when_5():
+  statement = "CASE " \
+              " WHEN column RLIKE '^\\d\\d\\d\\d$' THEN column " \
+              " ELSE '' " \
+              "END"
+
+  ast = query_parser.parse(statement)
+  assert_is_instance(ast, CaseWhenOp)
+  assert_is_instance(ast.default_value, Const)
+  assert_is_instance(ast.conditions[0]['condition'], RLikeOp)
+  eq_(ast.conditions[0]['condition'].lhs.path, 'column')
+  eq_(ast.conditions[0]['condition'].rhs.const, '^\\d\\d\\d\\d$')
+  eq_(ast.conditions[0]['expr'].path, 'column')
+  eq_(ast.default_value.const, '')
+
+
+def test_multiple_case_when():
+  statement = "CASE " \
+                " WHEN column = '' THEN column " \
+                " WHEN column = 'a' THEN column_a " \
+                " WHEN column = 'b' THEN column_b " \
+                " ELSE CONCAT('CMC', column) " \
+                "END"
+
+  ast = query_parser.parse(statement)
+
+  assert_is_instance(ast, CaseWhenOp)
+  assert_is_instance(ast.default_value, Function)
+  assert_is_instance(ast.conditions[0]['condition'], EqOp)
+  assert_is_instance(ast.conditions[0]['expr'], Var)
+  assert_is_instance(ast.conditions[1]['condition'], EqOp)
+  assert_is_instance(ast.conditions[1]['expr'], Var)
+  assert_is_instance(ast.conditions[2]['condition'], EqOp)
+  assert_is_instance(ast.conditions[2]['expr'], Var)
+  eq_(ast.conditions[0]['condition'].lhs.path, 'column')
+  eq_(ast.conditions[0]['condition'].rhs.const, '')
+  eq_(ast.conditions[1]['condition'].lhs.path, 'column')
+  eq_(ast.conditions[1]['condition'].rhs.const, 'a')
+  eq_(ast.conditions[2]['condition'].lhs.path, 'column')
+  eq_(ast.conditions[2]['condition'].rhs.const, 'b')
+  eq_(ast.conditions[0]['expr'].path, 'column')
+  eq_(ast.conditions[1]['expr'].path, 'column_a')
+  eq_(ast.conditions[2]['expr'].path, 'column_b')
+  eq_(ast.default_value.name, 'CONCAT')
+  eq_(ast.default_value.args[0].const, 'CMC')
+  eq_(ast.default_value.args[1].path, 'column')
+
+
+
+def test_more_case_when():
+  statement = """CASE
+  WHEN
+      (LOWER(x) not in ('blah', 'foo', 'baz'))
+      AND (y not like 'pattern%' OR LOWER(zz) != 'hoo ha')
+  THEN 1
+  ELSE 0
+END"""
+  ast = query_parser.parse(statement)
+  assert_is_instance(ast, CaseWhenOp)
+
+  statement = """
+  CASE
+        WHEN event_prop14 like '%.pdf' or event_prop33 like '%.pdf' THEN  'Whitepaper Download'
+        WHEN event_prop13 = 'liveball/us/bsd/form/initiated' THEN 'Contact Us'
+        WHEN (event_cust24=1 or event_cust16=1 or event_cust33=1 or event_cust34=1) and product_in_evar24 != '' THEN 'Videos'
+        WHEN event_prop34='en.community.dell.com/support-forums' THEN 'Training / Tutorials / Education'
+        WHEN event_cust38 = 1 or event_cust39 = 1 or event_cust40 = 1 THEN 'Chat'
+    END
+  """
+  ast = query_parser.parse(statement)
+  assert_is_instance(ast, CaseWhenOp)
+
+  ast = query_parser.parse("""
+    CASE
+    WHEN  LOWER(pagename) rlike '.*(:laptops|notebook|:intel_laptops|:notebook-finder|:laptops-v2|:new-envy|:.*spectre|:features|:elite|:back-to-business|:.*notebook|:tab:|:hp notebooks|:business notebooks|:notebook).*' or LOWER(channel) rlike '(hhos:laptops|pps|hhos:static|hhos:business|cs:premium:laptops|csf:en:notebooks:notebook software and how to questions|cs:ads:elite-products|cs:products:laptops|csf:en:notebooks|cs:ads:elitex3|csf:en:notebooks:business notebooks|csf:en:notebooks)'
+    THEN 'personal_computers'
+  END
+  """)
+  ast = query_parser.parse(statement)
+  assert_is_instance(ast, CaseWhenOp)
+
+  query_parser.parse("""
+  CASE WHEN cast(
+  (CASE WHEN coalesce(amount, '') = '' THEN '0' 
+  ELSE amount END) AS DOUBLE) > 5000.0 THEN 1 ELSE 0 END
+
+
+  """)
+
+
+
+def test_parse_not_rlike():
+  query_parser.parse("c_company NOT RLIKE '^MA'")
+   
+def test_parse_regexp():
+  ast = query_parser.parse("name REGEXP '^nana.*|^ipad.*|^np\..*|^internal.*'")
+  assert_is_instance(ast, RegExpOp)
+
 def test_parse_int():
   ast = query_parser.parse('123')
   assert_is_instance(ast, NumberConst)
@@ -26,6 +201,16 @@ def test_parse_positive_int():
   ast = query_parser.parse('+1')
   assert_is_instance(ast, NumberConst)
   eq_(ast.const, 1)
+
+def test_parse_float():
+  ast = query_parser.parse('123.1')
+  assert_is_instance(ast, NumberConst)
+  eq_(ast.const, 123.1)
+
+
+def test_reseved():
+  ast = query_parser.parse('`reserved`')
+  assert_is_instance(ast, Var)
 
 
 def test_parse_mul():
@@ -117,6 +302,37 @@ def test_parse_is_null():
   eq_(
     ast,
     IsOp(Var('x'), NullConst())
+  )
+
+def test_between():
+  ast = query_parser.parse('x  between 1 and 2')
+  eq_(
+    ast,
+    BetweenOp(Var('x'),  NumberConst(1), NumberConst(2) )
+  )
+
+
+  ast = query_parser.parse("x  between '1' and '2'")
+
+  eq_(
+    ast,
+    BetweenOp(Var('x'),  StringConst('1'), StringConst('2') )
+  )
+
+def test_in():
+  ast = query_parser.parse('x in (1, 2)')
+
+  eq_(
+    ast,
+    InOp(Var('x'),  Tuple(NumberConst(1), NumberConst(2) ))
+  )
+
+def test_not_in():
+  ast = query_parser.parse('x not in (1, 2)')
+
+  eq_(
+    ast,
+    NotOp(InOp(Var('x'),  Tuple(NumberConst(1), NumberConst(2))))
   )
 
 
@@ -258,7 +474,7 @@ def test_parse_statement():
   ast = query_parser.parse_statement('''
     select manager_id, count() from 
     employees
-    group by manager_id
+    group BY manager_id
   ''')
 
   ast = query_parser.parse_statement('''
@@ -298,8 +514,22 @@ def test_parse_statement():
   ''')
 
 
+def test_left_join():
+  ast = query_parser.parse_statement(''' 
+  SELECT *
+  FROM company_raw
+    JOIN (
+        SELECT MAX(dt) dt FROM company_raw
+    ) max_dt ON company_raw.dt = max_dt.dt
+
+     LEFT JOIN geonames.distinct_alternate_country_name countries
+         ON TRIM(UPPER(company_raw.country)) = TRIM(UPPER(countries.alternate_name))
+   ''')
+
 def test_table_functions():
 
+
+  # TODO: figure out if this is valid syntax
   ast = query_parser.parse_statement(''' 
   select *
   from flatten(docs, 'scripts')
@@ -309,10 +539,12 @@ def test_table_functions():
 
   eq_(ast,op)
 
+
   ast = query_parser.parse_statement(''' 
   select *
-  from flatten(select * from docs, "scripts")
+  from flatten( (select * from docs), "scripts")
   ''')
+
 
   eq_(ast,op)
 
