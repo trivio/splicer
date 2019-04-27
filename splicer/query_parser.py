@@ -111,8 +111,6 @@ def comparison_exp(tokens):
       tokens.pop(0)
       return NotOp(InOp(lhs, tuple_exp(tokens)))
 
-
-
     elif tokens[0].lower() in COMPARISON_OPS:
       token = tokens.pop(0)
       if tokens and tokens[0] == 'not':
@@ -127,11 +125,29 @@ def comparison_exp(tokens):
   # otherwise
   return lhs
 
+
+  
+
+
 def additive_exp(tokens):
   lhs = multiplicative_exp(tokens)
   while tokens:
     Op = ADDITIVE_OPS.get(tokens[0])
-    if Op:
+    if tokens[:2] == ['-', '>']:
+      tokens.pop(0)
+      tokens.pop(0)
+
+      if tokens[:1] == ['>']:
+        # ->> operator
+        tokens.pop(0)
+        rhs = multiplicative_exp(tokens)
+        lhs = JsonTextOp(lhs, rhs)
+      else:
+        # jus the -> operator
+        rhs = multiplicative_exp(tokens)
+        lhs = JsonOp(lhs, rhs)
+
+    elif Op:
       tokens.pop(0)
       rhs = multiplicative_exp(tokens)
       lhs = Op(lhs, rhs)
@@ -184,6 +200,9 @@ def value_exp(tokens):
 
     return ItemGetterOp(key)
 
+
+    
+
   if token.startswith('?'):
     pos = int(token[1:])
     return ParamGetterOp(pos)
@@ -229,9 +248,13 @@ def tuple_exp(tokens):
 
 def function_exp(name, tokens):
   token = tokens.pop(0)
+
   if token != '(':
     raise SyntaxError('Expecting "("')
 
+  if name.lower() == 'count' and tokens[0] == 'distinct':
+    tokens.pop(0)
+    name = 'count_distinct'
 
   args = tuple_exp(tokens)
   return Function(name, *args.exprs)
@@ -297,29 +320,29 @@ def var_exp(name, tokens, allowed=string.ascii_letters + '_'):
 
 
 # sql specific parsing
-terminators = ('from',
- 'where',
- 'limit',
- 'offset',
- 'having',
- 'group',
- 'by',
- 'order',
- 'left',
- 'join',
- 'on',
- 'union',
- 'outer',
-
-'in',
-'is',
-'and',
-'or',
-'select',
-'between',
-'not',
-
-')'
+terminators = (
+    'distinct',
+    'from',
+    'where',
+    'limit',
+    'offset',
+    'having',
+    'group',
+    'by',
+    'order',
+    'left',
+    'join',
+    'on',
+    'union',
+    'outer',
+    'in',
+    'is',
+    'and',
+    'or',
+    'select',
+    'between',
+    'not',
+    ')'
  )
 
 def projection_op(relation,
@@ -543,7 +566,13 @@ def select_stmt(tokens):
     raise SyntaxError
   tokens.pop(0)
 
-  select_core = select_core_exp(tokens) 
+  if tokens[0] == 'distinct':
+    tokens.pop(0)
+    distinct = True
+  else:
+    distinct = False
+
+  select_core = select_core_exp(tokens)
   #while tokens and tokens[0] not in terminators:
   #  select_core.append(tokens.pop(0))
 
@@ -560,6 +589,9 @@ def select_stmt(tokens):
 
   
   relation =  projection_op(relation, select_core)
+
+  if distinct:
+    relation = DistinctOp(relation)
 
 
   if tokens[:2] == ['group', 'by']:
