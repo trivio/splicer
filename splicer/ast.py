@@ -386,4 +386,11 @@ class SliceOp(RelationalOp):
  
     return self.__class__(relation, *args, **parts)
 
-    
+
+# Physical Operations
+class IndexSeek(RelationalOp):
+  __slots__ = ('name','args')
+  def __init__(self, name, *args):
+    self.name = name
+    self.args = args
+
