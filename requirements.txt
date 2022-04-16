@@ -2,4 +2,4 @@ nose
 coverage
 codd
 zipper >= 0.0.3
--e .
+#-e .

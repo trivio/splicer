@@ -30,6 +30,9 @@ class NotOp(UnaryOp):
   """ not (expr)"""
   __slots__ = ('expr',)
 
+
+
+
 class ItemGetterOp(Expr):
   """ (expr)[key] """
   __slots__ = ('key',)
@@ -136,6 +139,19 @@ class BetweenOp(BinaryOp):
     self.lhs  = lhs
     self.rhs  = rhs
 
+
+# Postgres Specific operators
+class JsonOp(BinaryOp):
+  """ columns -> 'some path' """
+  __slots__ = ('lhs', 'rhs')
+
+
+# Postgres Specific operators
+class JsonTextOp(BinaryOp):
+  """ columns -> 'some path' """
+  __slots__ = ('lhs', 'rhs')
+
+
 class Const(Expr):
   __slots__ = ('const',)
 
@@ -212,7 +228,11 @@ COMPARISON_OPS = {
   'rlike': RLikeOp,
   'not like' : NotLikeOp,
   'not rlike' : NotRLikeOp,
-  'regexp': RegExpOp
+  'regexp': RegExpOp,
+
+  # Postgres opperators
+  '->': JsonOp,
+  '->>': JsonTextOp
 
 }
 
@@ -286,6 +306,11 @@ class ProjectionOp(RelationalOp):
     self.exprs = exprs
     self.schema = kw.get('schema')
 
+class DistinctOp(RelationalOp):
+  __slots__ = ('relation',)
+  def __init__(self, relation):
+    self.relation = relation
+    
 class SelectionOp(RelationalOp):
   __slots__ = ('relation','bool_op','schema')
   def __init__(self, relation, bool_op, schema=None):
