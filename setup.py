@@ -32,7 +32,7 @@ setup(
       "Topic :: Software Development",
   ],
   packages = find_packages(),
-
+  package_data={"splicer": ["py.typed"]},
   install_requires=[
     'codd',
     'zipper',
