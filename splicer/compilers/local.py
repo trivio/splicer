@@ -90,7 +90,16 @@ def ensure_group_op_when_ags(dataset, loc, operation):
             loc = u.replace(parent_op.new(aggregates=aggs)).down()
     return loc
 
-
+def distinct_op(dataset, operation):
+    def distinct(ctx):
+        relation = operation.relation(ctx)
+        seen = set()
+        for row in relation:
+            if row not in seen:
+                seen.add(row)
+                yield row
+    return distinct
+    
 def projection_op(dataset, operation):
     schema = operation.relation.schema
     columns = tuple(
@@ -281,7 +290,7 @@ def initialize_op(pos_and_aggs):
         # convert the tuple to a list so we can modify it
         record = list(row)
         for pos, agg in pos_and_aggs:
-            record[pos] = agg.initial
+            record[pos] = agg.initial if not callable(agg.initial) else agg.initial()
         return record
 
     return initialize
@@ -481,6 +490,7 @@ VALUE_EXPR = {
 
 RELATION_OPS = {
     AliasOp: alias_op,
+    DistinctOp: distinct_op,
     ProjectionOp: projection_op,
     SelectionOp: selection_op,
     OrderByOp: order_by_op,

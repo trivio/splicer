@@ -380,10 +380,11 @@ class ProjectionOp(RelationalOp):
 
 
 class DistinctOp(RelationalOp):
-    __slots__ = ("relation",)
+    __slots__ = ("relation","schema")
 
-    def __init__(self, relation: RelationalOp):
+    def __init__(self, relation: RelationalOp, schema: Schema = None):
         self.relation = relation
+        self.schema = schema
 
 
 class SelectionOp(RelationalOp):
@@ -482,7 +483,7 @@ class GroupByOp(RelationalOp):
     __slots__ = ("relation", "aggregates", "exprs", "schema")
 
     def __init__(
-        self, relation: RelationalOp, schema: Schema = None, *exprs: Expr, **kw: Any
+        self, relation: RelationalOp, *exprs: Expr, schema: Schema = None,  **kw: Any
     ):
         self.relation = relation
         self.exprs = exprs

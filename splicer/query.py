@@ -60,5 +60,7 @@ def view_replacer(dataset: DataSet, loc: Loc, op: AliasOp | LoadOp) -> Loc:
 
 def load_relation(dataset: DataSet, loc: Loc, op: AliasOp | LoadOp) -> Loc:
     adapter = dataset.adapter_for(op.name)
-    assert adapter
+    if adapter is None:
+        raise LookupError(f"No adapter for relation {op.name}")
+
     return adapter.evaluate(loc)
