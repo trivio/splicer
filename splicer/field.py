@@ -1,6 +1,5 @@
 from typing import Any, TypedDict, cast
 
-from . import protocols
 from .protocols import FieldType, Mode
 
 
@@ -11,7 +10,7 @@ class FieldAsDict(TypedDict, total=False):
     fields: list[Any]  # to bad fileds: list[FieldAsDict] causes cyclic errors
 
 
-class Field(protocols.Field):
+class Field:
     __slots__ = {
         "name": "-> string [REQUIRED]",
         "type": "-> string [REQUIRED] integer|float|string|boolean|date|datetime|time|record",
@@ -26,7 +25,7 @@ class Field(protocols.Field):
         type: FieldType,
         mode: Mode = "NULLABLE",
         schema_name: str = None,
-        fields: list[protocols.Field | FieldAsDict] = [],
+        fields: list[Field | FieldAsDict] = [],
     ):
         self.name = name
         self.type = type

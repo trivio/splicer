@@ -5,8 +5,9 @@ from typing import Any, Callable, Optional
 
 from splicer.ast import LoadOp
 
-from .protocols import Adapter, Schema
-
+#from .protocols import Adapter, Schema
+from .schema import Schema
+from .adapters import Adapter
 
 @dataclass
 class Relation:

@@ -5,7 +5,9 @@ from typing import TYPE_CHECKING, Any, Generic, Iterator, TypeVar
 
 from .ast import AliasOp, LoadOp, RelationalOp
 from .operations import isa  # type: ignore
-from .protocols import Relation, Schema
+
+from .schema import Schema
+from .relation import Relation
 from .schema_interpreter import resolve_schema  # type: ignore
 
 if TYPE_CHECKING:

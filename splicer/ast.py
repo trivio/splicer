@@ -3,9 +3,9 @@ from typing import Any, Callable, Collection, Optional, cast
 from . import protocols
 from .immutable import ImmutableMixin
 
-# from .schema import Schema
-from .protocols import Schema
-from .table import Table  # type: ignore
+from .schema import Schema
+
+from .table import Table  # type_: ignore
 
 
 class Expr(ImmutableMixin):
@@ -483,7 +483,7 @@ class GroupByOp(RelationalOp):
     __slots__ = ("relation", "aggregates", "exprs", "schema")
 
     def __init__(
-        self, relation: RelationalOp, *exprs: Expr, schema: Schema = None,  **kw: Any
+        self, relation: ProjectionOp, *exprs: Expr, schema: Schema = None,  **kw: Any
     ):
         self.relation = relation
         self.exprs = exprs

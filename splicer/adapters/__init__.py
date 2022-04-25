@@ -1,22 +1,21 @@
 from __future__ import annotations
 
-# from ..schema import Schema
+from ..schema import Schema
 from functools import partial
 from typing import Any, Optional
 
 from zipper import Loc  # type: ignore
 
-from .. import protocols
 from ..relation import Relation
 
 
-class Adapter(protocols.Adapter):
+class Adapter:
     """
     Adapter objects provide relations to the dataset.
     """
 
     @property
-    def relations(self) -> list[tuple[str, protocols.Relation]]:
+    def relations(self) -> list[tuple[str, Relation]]:
         """
         May return a list of name and schema of -some- of the relations
         the adapter supports.
@@ -26,7 +25,7 @@ class Adapter(protocols.Adapter):
         """
         return []
 
-    def get_relation(self, name: str) -> Optional[protocols.Relation]:
+    def get_relation(self, name: str) -> Optional[Relation]:
         """Return the relation (table, view, etc..) with the given name or None if this
         adapter does not have the given table."""
 
@@ -45,7 +44,7 @@ class Adapter(protocols.Adapter):
         # func.schema = op.schema
         return loc.replace(Relation(self, op.name, self.schema(op.name), func))
 
-    def schema(self, name: str) -> Optional[protocols.Schema]:
+    def schema(self, name: str) -> Optional[Schema]:
         raise NotImplementedError(
             "{} has not implemented schema".format(self.__class__.__name__)
         )

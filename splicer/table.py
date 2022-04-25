@@ -1,16 +1,18 @@
 from typing import Any, Iterator, TypeVar
 
 from . import protocols
-from .protocols import Adapter
+#from .protocols import Adapter
 from .schema import Field, Schema
+from .adapters import Adapter
+from .relation import Relation
 
 T = TypeVar("T")
 
 
-class Table(protocols.Relation):
+class Table(Relation):
     schema: Schema
 
-    def __init__(self, adapter: Adapter, name: str, schema: protocols.Schema | dict):
+    def __init__(self, adapter: Adapter, name: str, schema: Schema | dict):
         """
 
         Initialize a table with a name or a schema.

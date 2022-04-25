@@ -1,7 +1,7 @@
 from itertools import chain
 from typing import Any, Sequence, TypedDict
 
-from . import protocols
+
 from .field import Field, FieldAsDict
 from .immutable import ImmutableMixin
 
@@ -10,7 +10,7 @@ class SchemaAsDict(TypedDict):
     fields: list[FieldAsDict]
 
 
-class Schema(protocols.Schema, ImmutableMixin):
+class Schema( ImmutableMixin):
     __slots__ = {
         "name": "-> str",
         "fields": "-> [Field]",

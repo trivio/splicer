@@ -2,7 +2,7 @@ from typing import Any, Callable, Optional
 
 from zipper import Loc  # type: ignore
 
-from . import compat, functions, protocols
+from . import compat, functions
 from .adapters.null_adapter import NullAdapter
 from .aggregate import Aggregate  # type: ignore
 from .ast import AliasOp, Expr, LoadOp, RelationalOp
@@ -10,19 +10,23 @@ from .compilers import local  # type: ignore
 from .compilers.local import relational_function  # type: ignore
 from .field import Field
 from .operations import walk  # type: ignore
-from .protocols import Adapter
+
 from .query import Query, view_replacer
 from .query_builder import QueryBuilder  # type: ignore
 from .query_parser import parse_statement  # type: ignore
 
-DumpFunc = Callable[[protocols.Schema, protocols.Relation], None]
+from .adapters import Adapter
+from .relation import Relation
+from .schema import Schema
+
+DumpFunc = Callable[[Schema, Relation], None]
 
 
 class DataSet(object):
     def __init__(self) -> None:
         self.adapters: list[Adapter] = [NullAdapter()]
 
-        self.relation_cache: dict[str, protocols.Relation] = {}
+        self.relation_cache: dict[str, Relation] = {}
 
         self.views: dict[str, AliasOp] = {}
         # self.schema_cache = {}
@@ -119,7 +123,7 @@ class DataSet(object):
             return None
 
     @property
-    def relations(self) -> list[tuple[str, protocols.Relation]]:
+    def relations(self) -> list[tuple[str, Relation]]:
         """
         Returns a list of all relations from all adapters
         note this could be a slow operation as remote
@@ -139,7 +143,7 @@ class DataSet(object):
                 return adapter
         return None
 
-    def get_relation(self, name: str) -> Optional[protocols.Relation]:
+    def get_relation(self, name: str) -> Optional[Relation]:
         """Returns the relation for the given name.
 
         The dataset will search all adapters in the order the
@@ -156,7 +160,7 @@ class DataSet(object):
 
         return relation
 
-    def get_schema(self, name: str) -> protocols.Schema:
+    def get_schema(self, name: str) -> Schema:
         """
         Returns the schema for relation found with the given name.
 
@@ -180,7 +184,7 @@ class DataSet(object):
     def set_dump_func(self, dump_func: DumpFunc) -> None:
         self.dump_func = dump_func
 
-    def dump(self, schema: protocols.Schema, relation: protocols.Relation) -> None:
+    def dump(self, schema: Schema, relation: Relation) -> None:
         if self.dump_func is not None:
             self.dump_func(schema, relation)
 

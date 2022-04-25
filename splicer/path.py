@@ -1,14 +1,14 @@
-# type: ignore
 """
 path.py - functions for manipulation and extracting data from paths.
 """
 
+from typing import Generator
 import re
 
 from codd import Tokens
 
 
-def tokenize_pattern(pattern):
+def tokenize_pattern(pattern) -> Generator[str, None, None]:
     t = Tokens(pattern)
     while not t.at_end():
         if t.current_char == "/":

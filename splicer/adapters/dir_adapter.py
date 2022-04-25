@@ -2,7 +2,7 @@ from splicer import Field, Schema
 from splicer.adapters import Adapter
 from splicer.ast import *
 from splicer.codecs import schema_from_path
-from splicer.compilers.local import relational_function
+from splicer.compilers.local import relational_function #type: ignore
 from splicer.path import columns, pattern_regex, regex_str, tokenize_pattern
 
 

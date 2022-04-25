@@ -2,7 +2,7 @@ from typing import Any, Iterator, Optional, Sequence, TypedDict, cast
 
 from splicer import Table
 
-from ..protocols import Relation
+from ..relation import Relation
 from ..schema import Schema, SchemaAsDict
 from . import Adapter
 

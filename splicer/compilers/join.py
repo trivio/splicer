@@ -1,3 +1,4 @@
+#type: ignore
 from collections import defaultdict
 from functools import partial
 from sys import getsizeof
