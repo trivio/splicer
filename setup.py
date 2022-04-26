@@ -19,20 +19,15 @@ setup(
   author_email='scott@triv.io',
   url='http://github.com/trivio/splicer',
   classifiers=[
-      "Programming Language :: Python",
-      "Programming Language :: Python :: 2",
-      "Programming Language :: Python :: 2.7",
-      "Programming Language :: Python :: 3",
-      "Programming Language :: Python :: 3.4",
-      "Programming Language :: Python :: 3.5",
+      "Programming Language :: Python :: 3.10",
       "License :: OSI Approved :: MIT License",
       "Operating System :: OS Independent",
-      "Development Status :: 3 - Alpha",
       "Intended Audience :: Developers",
       "Topic :: Software Development",
   ],
+  python_requires='>=3.8',
   packages = find_packages(),
-
+  package_data={"splicer": ["py.typed"]},
   install_requires=[
     'codd',
     'zipper',

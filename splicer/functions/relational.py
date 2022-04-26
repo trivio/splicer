@@ -4,81 +4,71 @@ Functions useable in the from clause
 
 from ..schema import Schema
 
+
 def init(dataset):
-  dataset.add_function("flatten", flatten, flatten_schema)
+    dataset.add_function("flatten", flatten, flatten_schema)
 
 
 def flatten(ctx, relation, path):
-  schema = relation.schema
+    schema = relation.schema
 
-  field = schema[path]
+    field = schema[path]
 
+    if field.mode != "REPEATED" and not field.type == "RECORD":
+        raise ValueError("Can not flatten non-repeating field {}".format(path))
 
-  if field.mode != "REPEATED" and not field.type=="RECORD":
-    raise ValueError("Can not flatten non-repeating field {}".format(path))
+    field_pos = schema.field_position(path)
 
-  field_pos = schema.field_position(path)
+    def flatten_repeated_scalar(row):
 
-  def flatten_repeated_scalar(row):
+        for value in row[field_pos]:
+            new_row = list(row)
+            new_row[field_pos] = value
 
-    for value in row[field_pos]:
-      new_row = list(row)
-      new_row[field_pos] = value 
+            yield new_row
 
-      yield new_row
+    def flatten_single_record(row):
+        value = row[field_pos]
+        if value:
+            new_row = list(row)
+            values = [value.get(f.name) for f in field.fields]
+            new_row[field_pos : field_pos + 1] = values
+            yield new_row
 
-  def flatten_single_record(row):
-    value  = row[field_pos]
-    if value:
-      new_row = list(row)
-      values = [value.get(f.name) for f in field.fields]
-      new_row[field_pos:field_pos+1] = values
-      yield new_row
+    def flatten_repeated_record(row):
+        col = row[field_pos]
+        if col:
+            for value in row[field_pos]:
+                new_row = list(row)
+                values = [value.get(f.name) for f in field.fields]
 
-  def flatten_repeated_record(row):
-    col = row[field_pos]
-    if col:
-      for value in row[field_pos]:
-        new_row = list(row)
-        values = [value.get(f.name) for f in field.fields]
+                new_row[field_pos : field_pos + 1] = values
+                yield new_row
 
-        new_row[field_pos:field_pos+1] = values
-        yield new_row
+    if field.type == "RECORD":
+        if field.mode == "REPEATED":
+            flatten_row = flatten_repeated_record
+        else:
+            flatten_row = flatten_single_record
 
-
-  if field.type == 'RECORD':
-    if field.mode == "REPEATED":
-      flatten_row = flatten_repeated_record
     else:
-      flatten_row = flatten_single_record
+        flatten_row = flatten_repeated_scalar
 
-  else:
-    flatten_row = flatten_repeated_scalar
-
-  return (
-    new_row
-    for row in relation(ctx)
-    for new_row in flatten_row(row)
-  )
+    return (new_row for row in relation(ctx) for new_row in flatten_row(row))
 
 
 def flatten_schema(relation, path):
-  schema = relation.schema
-  field = schema[path]
-  new_fields = schema.fields[:]
-  field_pos = schema.field_position(path)
+    schema = relation.schema
+    field = schema[path]
+    new_fields = schema.fields[:]
+    field_pos = schema.field_position(path)
 
-  if field.type == 'RECORD':
-    ffields = [
-      f.new(name="{}_{}".format(field.name, f.name)) 
-      for f in field.fields
-    ]
-  else:
-    ffields = [field.new(mode="NULLABLE")]
+    if field.type == "RECORD":
+        ffields = [f.new(name="{}_{}".format(field.name, f.name)) for f in field.fields]
+    else:
+        ffields = [field.new(mode="NULLABLE")]
 
-  # replace the repated field with the flatten one
-  new_fields[field_pos:field_pos+1] = ffields 
+    # replace the repated field with the flatten one
+    new_fields[field_pos : field_pos + 1] = ffields
 
-  return Schema(new_fields)
-
-
+    return Schema(new_fields)
