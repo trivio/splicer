@@ -1,5 +1,3 @@
-from nose.tools import *
-
 from splicer.schema import Schema
 
 
@@ -14,6 +12,6 @@ def test_schema():
         ],
     )
 
-    eq_(schema.field_position("y"), 0)
-    eq_(schema.field_position("x"), 1)
-    eq_(schema.field_position("a.y"), 0)
+    assert schema.field_position("y") == 0
+    assert schema.field_position("x") == 1
+    assert schema.field_position("a.y") == 0

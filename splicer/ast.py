@@ -1,11 +1,13 @@
-from typing import Any, Callable, Collection, Optional, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Callable, Collection, Optional, cast
 
 from . import protocols
 from .immutable import ImmutableMixin
-
 from .schema import Schema
 
-from .table import Table  # type_: ignore
+if TYPE_CHECKING:
+    from .table import Table
 
 
 class Expr(ImmutableMixin):
@@ -371,16 +373,14 @@ class AliasOp(RelationalOp):
 class ProjectionOp(RelationalOp):
     __slots__ = ("relation", "exprs", "schema")
 
-    def __init__(
-        self, relation: RelationalOp, *exprs: Expr, schema: Schema = None, **kw: Any
-    ):
+    def __init__(self, relation: RelationalOp, *exprs: Expr, schema: Schema = None):
         self.relation = relation
         self.exprs = exprs
         self.schema = schema
 
 
 class DistinctOp(RelationalOp):
-    __slots__ = ("relation","schema")
+    __slots__ = ("relation", "schema")
 
     def __init__(self, relation: RelationalOp, schema: Schema = None):
         self.relation = relation
@@ -457,12 +457,7 @@ class OrderByOp(RelationalOp):
     __slots__ = ("relation", "exprs", "schema")
 
     def __init__(
-        self,
-        relation: RelationalOp,
-        first: Expr,
-        schema: Schema = None,
-        *exprs: Expr,
-        **kw: Any
+        self, relation: RelationalOp, first: Expr, *exprs: Expr, schema: Schema = None
     ):
         self.relation = relation
         self.exprs = (first,) + exprs
@@ -483,7 +478,7 @@ class GroupByOp(RelationalOp):
     __slots__ = ("relation", "aggregates", "exprs", "schema")
 
     def __init__(
-        self, relation: ProjectionOp, *exprs: Expr, schema: Schema = None,  **kw: Any
+        self, relation: ProjectionOp, *exprs: Expr, schema: Schema = None, **kw: Any
     ):
         self.relation = relation
         self.exprs = exprs
@@ -500,9 +495,7 @@ class GroupByOp(RelationalOp):
 class SliceOp(RelationalOp):
     __slots__ = ("relation", "start", "stop", "schema")
 
-    def __init__(
-        self, relation: RelationalOp, schema: Schema = None, *args: int, **kw: Any
-    ):
+    def __init__(self, relation: RelationalOp, *args: int, schema: Schema = None):
         self.relation = relation
         if len(args) == 1:
             self.start = 0
@@ -512,7 +505,7 @@ class SliceOp(RelationalOp):
 
         self.schema = schema
 
-    def new(self, **parts: Any) -> "SliceOp":
+    def new(self, **parts: Any) -> SliceOp:
         # slice op's __init__ doesn't match what's defined in __slots__
         # so we have to help it make a copy of this object
         args = parts.pop("start", self.start), parts.pop("stop", self.stop)

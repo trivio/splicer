@@ -90,6 +90,7 @@ def ensure_group_op_when_ags(dataset, loc, operation):
             loc = u.replace(parent_op.new(aggregates=aggs)).down()
     return loc
 
+
 def distinct_op(dataset, operation):
     def distinct(ctx):
         relation = operation.relation(ctx)
@@ -98,8 +99,10 @@ def distinct_op(dataset, operation):
             if row not in seen:
                 seen.add(row)
                 yield row
+
     return distinct
-    
+
+
 def projection_op(dataset, operation):
     schema = operation.relation.schema
     columns = tuple(

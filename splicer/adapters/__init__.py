@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from ..schema import Schema
 from functools import partial
 from typing import Any, Optional
 
 from zipper import Loc  # type: ignore
 
 from ..relation import Relation
+from ..schema import Schema
 
 
 class Adapter:
@@ -15,7 +15,7 @@ class Adapter:
     """
 
     @property
-    def relations(self) -> list[tuple[str, Relation]]:
+    def relations(self) -> list[tuple[str, Schema]]:
         """
         May return a list of name and schema of -some- of the relations
         the adapter supports.

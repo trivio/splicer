@@ -34,14 +34,14 @@ class DictAdapter(Adapter):
 
         for name, table in tables.items():
 
-            schema = Schema(**table["schema"])
+            schema = Schema(name=name, **table["schema"])
             rows = table["rows"]
 
             self._tables[name] = DictTable(self, name, schema=schema, rows=rows)
 
     @property
-    def relations(self) -> list[tuple[str, Relation]]:
-        return [(name, table) for name, table in self._tables.items()]
+    def relations(self) -> list[tuple[str, Schema]]:
+        return [(name, table.schema) for name, table in self._tables.items()]
 
     def has(self, relation: str) -> bool:
         return relation in self._tables
@@ -61,7 +61,7 @@ class DictTable(Table):
     def __init__(
         self, adapter: Adapter, name: str, schema: Schema, rows: Sequence[Any]
     ):
-        super(DictTable, self).__init__(adapter, name, schema)  # type: ignore
+        super(DictTable, self).__init__(adapter, name, schema)
         self.key_index = [
             (f.name, () if f.mode == "REPEATED" else None) for f in self.schema.fields
         ]

@@ -38,4 +38,9 @@ class ImmutableMixin(object):
         if arg_spec.varargs is not None:
             args.extend(attrs.pop(arg_spec.varargs, ()))
 
-        return self.__class__(*args, **attrs)
+        try:
+            return self.__class__(*args, **attrs)
+        except:
+            import pdb
+
+            pdb.set_trace()

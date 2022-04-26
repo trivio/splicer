@@ -2,8 +2,8 @@
 path.py - functions for manipulation and extracting data from paths.
 """
 
-from typing import Generator
 import re
+from typing import Generator
 
 from codd import Tokens
 

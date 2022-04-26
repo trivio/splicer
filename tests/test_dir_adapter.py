@@ -2,12 +2,10 @@ import os
 import shutil
 import tempfile
 
-from nose.tools import *
-
 from splicer import Schema
 from splicer.adapters.dir_adapter import DirAdapter
 from splicer.ast import *
-from splicer.operations import query_zipper
+from splicer.operations import query_zipper  # type: ignore
 
 from . import compare
 
@@ -22,20 +20,22 @@ TEST_SCHEMA = Schema(
 )
 
 
-def setup_func():
+def setup_function(func):
     global path
-    path = tempfile.mkdtemp()
+    if func in (test_evaluate, test_guess_schema):
+        path = tempfile.mkdtemp()
 
 
-def teardown_func():
+def teardown_function(func):
     global path
-    try:
-        shutil.rmtree(path)
-    finally:
-        path = None
+    if func in (test_evaluate, test_guess_schema):
+
+        try:
+            shutil.rmtree(path)
+        finally:
+            path = None
 
 
-@with_setup(setup_func, teardown_func)
 def test_evaluate():
 
     adapter = DirAdapter(
@@ -212,7 +212,6 @@ def test_query_field_from_path_and_contents():
     )
 
 
-@with_setup(setup_func, teardown_func)
 def test_guess_schema():
     for department in ("engineering", "sales", "marketing"):
         sub_path = os.path.join(path, department)

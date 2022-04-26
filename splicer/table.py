@@ -1,10 +1,11 @@
 from typing import Any, Iterator, TypeVar
 
 from . import protocols
-#from .protocols import Adapter
-from .schema import Field, Schema
 from .adapters import Adapter
 from .relation import Relation
+
+# from .protocols import Adapter
+from .schema import Field, Schema
 
 T = TypeVar("T")
 

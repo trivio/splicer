@@ -14,6 +14,7 @@ from .ast import (
     SliceOp,
 )
 from .compilers.local import is_aggregate
+from .query import Query
 
 
 class QueryBuilder(object):

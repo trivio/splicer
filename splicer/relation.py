@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from splicer.ast import LoadOp
 
-#from .protocols import Adapter, Schema
 from .schema import Schema
-from .adapters import Adapter
+
+if TYPE_CHECKING:
+    from .adapters import Adapter
+
 
 @dataclass
 class Relation:
@@ -31,7 +33,7 @@ class Relation:
         elif isinstance(other, LoadOp):
             return self.name == other.name
         else:
-            raise NotImplemented
+            raise NotImplementedError()
 
     def __call__(self, ctx: Any) -> Any:
         return self.records(ctx)

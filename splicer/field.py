@@ -1,4 +1,6 @@
-from typing import Any, TypedDict, cast
+from __future__ import annotations
+
+from typing import Any, Optional, TypedDict, cast
 
 from .protocols import FieldType, Mode
 
@@ -8,9 +10,18 @@ class FieldAsDict(TypedDict, total=False):
     type: FieldType
     mode: Mode
     fields: list[Any]  # to bad fileds: list[FieldAsDict] causes cyclic errors
+    # schema_name: Optional[str]
 
 
-class Field:
+# @dataclass
+class Field(object):
+    name: str
+    type: FieldType
+    mode: Mode
+    # todo:this should be a tuple
+    fields: list[Field]
+    schema_name: Optional[str]
+
     __slots__ = {
         "name": "-> string [REQUIRED]",
         "type": "-> string [REQUIRED] integer|float|string|boolean|date|datetime|time|record",

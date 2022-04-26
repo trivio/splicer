@@ -3,6 +3,7 @@ from typing import Any, Callable, Optional
 from zipper import Loc  # type: ignore
 
 from . import compat, functions
+from .adapters import Adapter
 from .adapters.null_adapter import NullAdapter
 from .aggregate import Aggregate  # type: ignore
 from .ast import AliasOp, Expr, LoadOp, RelationalOp
@@ -10,12 +11,9 @@ from .compilers import local  # type: ignore
 from .compilers.local import relational_function  # type: ignore
 from .field import Field
 from .operations import walk  # type: ignore
-
 from .query import Query, view_replacer
 from .query_builder import QueryBuilder  # type: ignore
 from .query_parser import parse_statement  # type: ignore
-
-from .adapters import Adapter
 from .relation import Relation
 from .schema import Schema
 
@@ -27,9 +25,10 @@ class DataSet(object):
         self.adapters: list[Adapter] = [NullAdapter()]
 
         self.relation_cache: dict[str, Relation] = {}
+        self.schema_cache: dict[str, Schema] = {}
 
         self.views: dict[str, AliasOp] = {}
-        # self.schema_cache = {}
+
         self.executor = None
         self.compile: Callable[..., Any] = local.compile  # type: ignore
         self.dump_func: Optional[DumpFunc] = None
@@ -123,7 +122,7 @@ class DataSet(object):
             return None
 
     @property
-    def relations(self) -> list[tuple[str, Relation]]:
+    def relations(self) -> list[tuple[str, Schema]]:
         """
         Returns a list of all relations from all adapters
         note this could be a slow operation as remote
@@ -134,8 +133,9 @@ class DataSet(object):
 
         for adapter in self.adapters:
             for name, schema in adapter.relations:
-                self.relation_cache[name] = schema
-        return [item for item in self.relation_cache.items() if item[0] != ""]
+                self.schema_cache[name] = schema
+        # TODO: curious when and why the key would be empty
+        return [item for item in self.schema_cache.items() if item[0] != ""]
 
     def adapter_for(self, relation: str) -> Optional[Adapter]:
         for adapter in self.adapters:
@@ -143,6 +143,8 @@ class DataSet(object):
                 return adapter
         return None
 
+    # Todo: it's confusing how sometimes a relation is a Relation object and sometimes it's (Name, Schema)
+    # clean this up
     def get_relation(self, name: str) -> Optional[Relation]:
         """Returns the relation for the given name.
 
@@ -156,6 +158,8 @@ class DataSet(object):
                 relation = adapter.get_relation(name)
                 if relation:
                     self.relation_cache[name] = relation
+
+                    # self.schema_cache[name] = relation.schema
                     break
 
         return relation

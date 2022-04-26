@@ -1,10 +1,12 @@
 import os
 
-from nose.tools import eq_
-
 from splicer import Relation
 from splicer.ast import LoadOp
-from splicer.operations import query_zipper
+from splicer.operations import query_zipper  # type: ignore
+
+
+def assert_is_instance(instance, type_) -> None:
+    assert isinstance(instance, type_)
 
 
 def compare(op1, op2):

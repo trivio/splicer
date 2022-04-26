@@ -22,7 +22,7 @@ employee_records = [
 
 class EmployeeAdapter(DictAdapter):
     def __init__(self):
-        super(self.__class__, self).__init__(
+        super(EmployeeAdapter, self).__init__(
             employees=dict(
                 schema=dict(
                     fields=[

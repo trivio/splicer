@@ -1,10 +1,8 @@
 from datetime import date
 
-from nose.tools import *
-
 from splicer import DataSet, Query
 from splicer.ast import *
-from splicer.compilers.local import compile
+from splicer.compilers.local import compile  # type: ignore
 
 from .fixtures.employee_adapter import EmployeeAdapter
 
@@ -16,17 +14,14 @@ def test_union():
     q = Query(dataset, UnionAllOp(LoadOp("employees"), LoadOp("employees")))
 
     evaluate = compile(q)
-    assert_sequence_equal(
-        list(evaluate(dict(dataset=dataset))),
-        [
-            (1234, "Tom Tompson", date(2009, 1, 17), None, ()),
-            (4567, "Sally Sanders", date(2010, 2, 24), 1234, ()),
-            (8901, "Mark Markty", date(2010, 3, 1), 1234, ("sales", "marketing")),
-            (1234, "Tom Tompson", date(2009, 1, 17), None, ()),
-            (4567, "Sally Sanders", date(2010, 2, 24), 1234, ()),
-            (8901, "Mark Markty", date(2010, 3, 1), 1234, ("sales", "marketing")),
-        ],
-    )
+    assert list(evaluate(dict(dataset=dataset))) == [
+        (1234, "Tom Tompson", date(2009, 1, 17), None, ()),
+        (4567, "Sally Sanders", date(2010, 2, 24), 1234, ()),
+        (8901, "Mark Markty", date(2010, 3, 1), 1234, ("sales", "marketing")),
+        (1234, "Tom Tompson", date(2009, 1, 17), None, ()),
+        (4567, "Sally Sanders", date(2010, 2, 24), 1234, ()),
+        (8901, "Mark Markty", date(2010, 3, 1), 1234, ("sales", "marketing")),
+    ]
 
 
 def test_projection():
@@ -37,10 +32,11 @@ def test_projection():
 
     evaluate = compile(q)
 
-    assert_sequence_equal(
-        list(evaluate(dict(dataset=dataset))),
-        [("Tom Tompson",), ("Sally Sanders",), ("Mark Markty",)],
-    )
+    assert list(evaluate(dict(dataset=dataset))) == [
+        ("Tom Tompson",),
+        ("Sally Sanders",),
+        ("Mark Markty",),
+    ]
 
 
 def test_projection_wo_relation():
@@ -59,7 +55,7 @@ def test_projection_wo_relation():
 
     evaluate = compile(q)
 
-    assert_sequence_equal(list(evaluate(dict(dataset=dataset))), [(1,)])
+    assert list(evaluate(dict(dataset=dataset))) == [(1,)]
 
 
 def test_selection():
@@ -72,12 +68,9 @@ def test_selection():
 
     evaluate = compile(q)
 
-    assert_sequence_equal(
-        list(evaluate(dict(dataset=dataset))),
-        [
-            (1234, "Tom Tompson", date(2009, 1, 17), None, ()),
-        ],
-    )
+    assert list(evaluate(dict(dataset=dataset))) == [
+        (1234, "Tom Tompson", date(2009, 1, 17), None, ()),
+    ]
 
     q = Query(
         dataset,
@@ -86,13 +79,10 @@ def test_selection():
 
     evaluate = compile(q)
 
-    assert_sequence_equal(
-        list(evaluate(dict(dataset=dataset))),
-        [
-            (4567, "Sally Sanders", date(2010, 2, 24), 1234, ()),
-            (8901, "Mark Markty", date(2010, 3, 1), 1234, ("sales", "marketing")),
-        ],
-    )
+    assert list(evaluate(dict(dataset=dataset))) == [
+        (4567, "Sally Sanders", date(2010, 2, 24), 1234, ()),
+        (8901, "Mark Markty", date(2010, 3, 1), 1234, ("sales", "marketing")),
+    ]
 
 
 def test_addition():
@@ -105,9 +95,7 @@ def test_addition():
     )
     evaluate = compile(q)
 
-    assert_sequence_equal(
-        list(evaluate(dict(dataset=dataset))), [(1235,), (4568,), (8902,)]
-    )
+    assert list(evaluate(dict(dataset=dataset))) == [(1235,), (4568,), (8902,)]
 
 
 def test_order_by():
@@ -117,14 +105,11 @@ def test_order_by():
     q = Query(dataset, OrderByOp(LoadOp("employees"), Var("full_name")))
     evaluate = compile(q)
 
-    assert_sequence_equal(
-        list(evaluate(dict(dataset=dataset))),
-        [
-            (8901, "Mark Markty", date(2010, 3, 1), 1234, ("sales", "marketing")),
-            (4567, "Sally Sanders", date(2010, 2, 24), 1234, ()),
-            (1234, "Tom Tompson", date(2009, 1, 17), None, ()),
-        ],
-    )
+    assert list(evaluate(dict(dataset=dataset))) == [
+        (8901, "Mark Markty", date(2010, 3, 1), 1234, ("sales", "marketing")),
+        (4567, "Sally Sanders", date(2010, 2, 24), 1234, ()),
+        (1234, "Tom Tompson", date(2009, 1, 17), None, ()),
+    ]
 
 
 def test_order_by_asc():
@@ -134,14 +119,11 @@ def test_order_by_asc():
     q = Query(dataset, OrderByOp(LoadOp("employees"), Asc(Var("employee_id"))))
     evaluate = compile(q)
 
-    assert_sequence_equal(
-        list(evaluate(dict(dataset=dataset))),
-        [
-            (1234, "Tom Tompson", date(2009, 1, 17), None, ()),
-            (4567, "Sally Sanders", date(2010, 2, 24), 1234, ()),
-            (8901, "Mark Markty", date(2010, 3, 1), 1234, ("sales", "marketing")),
-        ],
-    )
+    assert list(evaluate(dict(dataset=dataset))) == [
+        (1234, "Tom Tompson", date(2009, 1, 17), None, ()),
+        (4567, "Sally Sanders", date(2010, 2, 24), 1234, ()),
+        (8901, "Mark Markty", date(2010, 3, 1), 1234, ("sales", "marketing")),
+    ]
 
 
 def test_function_calls():
@@ -160,14 +142,11 @@ def test_function_calls():
     )
     evaluate = compile(q)
 
-    assert_sequence_equal(
-        list(evaluate(dict(dataset=dataset))),
-        [
-            ("TT",),
-            ("SS",),
-            ("MM",),
-        ],
-    )
+    assert list(evaluate(dict(dataset=dataset))) == [
+        ("TT",),
+        ("SS",),
+        ("MM",),
+    ]
 
 
 def test_decorator_function_calls():
@@ -187,14 +166,11 @@ def test_decorator_function_calls():
     )
     evaluate = compile(q)
 
-    assert_sequence_equal(
-        list(evaluate(dict(dataset=dataset))),
-        [
-            ("TT",),
-            ("SS",),
-            ("MM",),
-        ],
-    )
+    assert list(evaluate(dict(dataset=dataset))) == [
+        ("TT",),
+        ("SS",),
+        ("MM",),
+    ]
 
 
 def test_aggregation_whole_table():
@@ -204,12 +180,9 @@ def test_aggregation_whole_table():
     q = Query(dataset, ProjectionOp(LoadOp("employees"), Function("count")))
     evaluate = compile(q)
 
-    assert_sequence_equal(
-        list(evaluate(dict(dataset=dataset))),
-        [
-            (3,),
-        ],
-    )
+    assert list(evaluate(dict(dataset=dataset))) == [
+        (3,),
+    ]
 
 
 def test_aggregation_on_column():
@@ -225,7 +198,7 @@ def test_aggregation_on_column():
     )
     evaluate = compile(q)
 
-    assert_sequence_equal(list(evaluate(dict(dataset=dataset))), [(None, 1), (1234, 2)])
+    assert list(evaluate(dict(dataset=dataset))) == [(None, 1), (1234, 2)]
 
 
 def test_limit():
@@ -235,12 +208,9 @@ def test_limit():
     q = Query(dataset, SliceOp(LoadOp("employees"), 1))
     evaluate = compile(q)
 
-    assert_sequence_equal(
-        list(evaluate(dict(dataset=dataset))),
-        [
-            (1234, "Tom Tompson", date(2009, 1, 17), None, ()),
-        ],
-    )
+    assert list(evaluate(dict(dataset=dataset))) == [
+        (1234, "Tom Tompson", date(2009, 1, 17), None, ()),
+    ]
 
 
 def test_offset():
@@ -250,13 +220,10 @@ def test_offset():
     q = Query(dataset, SliceOp(LoadOp("employees"), 1, None))
     evaluate = compile(q)
 
-    assert_sequence_equal(
-        list(evaluate(dict(dataset=dataset))),
-        [
-            (4567, "Sally Sanders", date(2010, 2, 24), 1234, ()),
-            (8901, "Mark Markty", date(2010, 3, 1), 1234, ("sales", "marketing")),
-        ],
-    )
+    assert list(evaluate(dict(dataset=dataset))) == [
+        (4567, "Sally Sanders", date(2010, 2, 24), 1234, ()),
+        (8901, "Mark Markty", date(2010, 3, 1), 1234, ("sales", "marketing")),
+    ]
 
 
 def test_offset_and_limit():
@@ -266,12 +233,9 @@ def test_offset_and_limit():
     q = Query(dataset, SliceOp(LoadOp("employees"), 1, 2))
     evaluate = compile(q)
 
-    assert_sequence_equal(
-        list(evaluate(dict(dataset=dataset))),
-        [
-            (4567, "Sally Sanders", date(2010, 2, 24), 1234, ()),
-        ],
-    )
+    assert list(evaluate(dict(dataset=dataset))) == [
+        (4567, "Sally Sanders", date(2010, 2, 24), 1234, ()),
+    ]
 
 
 def test_cross_join():
@@ -280,7 +244,7 @@ def test_cross_join():
 
     q = Query(dataset, JoinOp(LoadOp("employees"), LoadOp("employees")))
     evaluate = compile(q)
-    eq_(len(list(evaluate(dict(dataset=dataset)))), 9)
+    assert len(list(evaluate(dict(dataset=dataset)))) == 9
 
 
 def test_self_join():
@@ -297,35 +261,32 @@ def test_self_join():
     )
     evaluate = compile(q)
 
-    assert_sequence_equal(
-        list(evaluate(dict(dataset=dataset))),
-        [
-            (
-                4567,
-                "Sally Sanders",
-                date(2010, 2, 24),
-                1234,
-                (),
-                1234,
-                "Tom Tompson",
-                date(2009, 1, 17),
-                None,
-                (),
-            ),
-            (
-                8901,
-                "Mark Markty",
-                date(2010, 3, 1),
-                1234,
-                ("sales", "marketing"),
-                1234,
-                "Tom Tompson",
-                date(2009, 1, 17),
-                None,
-                (),
-            ),
-        ],
-    )
+    assert list(evaluate(dict(dataset=dataset))) == [
+        (
+            4567,
+            "Sally Sanders",
+            date(2010, 2, 24),
+            1234,
+            (),
+            1234,
+            "Tom Tompson",
+            date(2009, 1, 17),
+            None,
+            (),
+        ),
+        (
+            8901,
+            "Mark Markty",
+            date(2010, 3, 1),
+            1234,
+            ("sales", "marketing"),
+            1234,
+            "Tom Tompson",
+            date(2009, 1, 17),
+            None,
+            (),
+        ),
+    ]
 
 
 def test_self_join_with_projection():
@@ -347,20 +308,17 @@ def test_self_join_with_projection():
 
     evaluate = compile(q)
 
-    assert_sequence_equal(
-        list(evaluate(dict(dataset=dataset))),
-        [
-            (4567, "Sally Sanders", date(2010, 2, 24), 1234, (), "Tom Tompson"),
-            (
-                8901,
-                "Mark Markty",
-                date(2010, 3, 1),
-                1234,
-                ("sales", "marketing"),
-                "Tom Tompson",
-            ),
-        ],
-    )
+    assert list(evaluate(dict(dataset=dataset))) == [
+        (4567, "Sally Sanders", date(2010, 2, 24), 1234, (), "Tom Tompson"),
+        (
+            8901,
+            "Mark Markty",
+            date(2010, 3, 1),
+            1234,
+            ("sales", "marketing"),
+            "Tom Tompson",
+        ),
+    ]
 
 
 def test_function_in_from():
@@ -378,21 +336,19 @@ def test_function_in_from():
 
     evaluate = compile(q)
 
-    assert_sequence_equal(
-        list(evaluate(dict(dataset=dataset))), [(1234, "sales"), (1234, "marketing")]
-    )
+    assert list(evaluate(dict(dataset=dataset))) == [
+        (1234, "sales"),
+        (1234, "marketing"),
+    ]
 
     q = Query(dataset, Function("flatten", LoadOp("employees"), StringConst("roles")))
 
     evaluate = compile(q)
 
-    assert_sequence_equal(
-        list(evaluate(dict(dataset=dataset))),
-        [
-            [8901, "Mark Markty", date(2010, 3, 1), 1234, "sales"],
-            [8901, "Mark Markty", date(2010, 3, 1), 1234, "marketing"],
-        ],
-    )
+    assert list(evaluate(dict(dataset=dataset))) == [
+        [8901, "Mark Markty", date(2010, 3, 1), 1234, "sales"],
+        [8901, "Mark Markty", date(2010, 3, 1), 1234, "marketing"],
+    ]
 
 
 def test_paramgetter():
@@ -403,6 +359,4 @@ def test_paramgetter():
 
     evaluate = compile(q)
 
-    assert_sequence_equal(
-        list(evaluate(dict(dataset=dataset, params=("foo",)))), [("foo",)]
-    )
+    assert list(evaluate(dict(dataset=dataset, params=("foo",)))) == [("foo",)]

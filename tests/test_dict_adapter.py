@@ -1,7 +1,5 @@
 from datetime import date
 
-from nose.tools import *
-
 from splicer import Field, Query, Schema
 from splicer.adapters.dict_adapter import DictAdapter
 
@@ -39,21 +37,15 @@ def test_dict_adapter_with_schemas():
 
     employees = adapter.get_relation("employees")
 
-    assert_sequence_equal(
-        employees.schema.fields,
-        [
-            Field(name="employee_id", type="INTEGER", schema_name="employees"),
-            Field(name="full_name", type="STRING", schema_name="employees"),
-            Field(name="employment_date", type="DATE", schema_name="employees"),
-            Field(name="manager_id", type="INTEGER", schema_name="employees"),
-        ],
-    )
+    assert employees.schema.fields == [
+        Field(name="employee_id", type="INTEGER", schema_name="employees"),
+        Field(name="full_name", type="STRING", schema_name="employees"),
+        Field(name="employment_date", type="DATE", schema_name="employees"),
+        Field(name="manager_id", type="INTEGER", schema_name="employees"),
+    ]
 
-    assert_sequence_equal(
-        list(employees),
-        [
-            (1234, "Tom Tompson", date(2009, 1, 17), None),
-            (4567, "Sally Sanders", date(2010, 2, 24), 1234),
-            (8901, "Mark Markty", date(2010, 3, 1), 1234),
-        ],
-    )
+    assert list(employees) == [
+        (1234, "Tom Tompson", date(2009, 1, 17), None),
+        (4567, "Sally Sanders", date(2010, 2, 24), 1234),
+        (8901, "Mark Markty", date(2010, 3, 1), 1234),
+    ]

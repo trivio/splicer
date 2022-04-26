@@ -1,6 +1,5 @@
 from itertools import chain
-from typing import Any, Sequence, TypedDict
-
+from typing import Sequence, TypedDict
 
 from .field import Field, FieldAsDict
 from .immutable import ImmutableMixin
@@ -10,7 +9,7 @@ class SchemaAsDict(TypedDict):
     fields: list[FieldAsDict]
 
 
-class Schema( ImmutableMixin):
+class Schema(ImmutableMixin):
     __slots__ = {
         "name": "-> str",
         "fields": "-> [Field]",
@@ -19,11 +18,23 @@ class Schema( ImmutableMixin):
     }
 
     def __init__(
-        self, fields: Sequence[Field | FieldAsDict], name: str = "", **kw: Any
+        self,
+        fields: Sequence[Field | FieldAsDict],
+        name: str = "",
+        _field_map: dict[str, Field] = None,
+        _field_pos: dict[str, int] = None,
     ):
         self.name = name
+
+        self.fields = []
+
+        # for field in fields:
+        #     f = field if isinstance(field, Field) else Field(**field)
+        #     f.schema_name=name
+        #     self.fields.append(f)
+
         self.fields = [
-            field if isinstance(field, Field) else Field(schema_name=name, **field)
+            field if isinstance(field, Field) else Field(schema_name=name, **field)  # type: ignore
             for field in fields
         ]
 

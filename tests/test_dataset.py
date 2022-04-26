@@ -1,9 +1,7 @@
-from nose.tools import *
-
 from splicer import DataSet, Query, Table
 from splicer.ast import *
 from splicer.dataset import replace_views
-from splicer.query_builder import QueryBuilder
+from splicer.query_builder import QueryBuilder  # type: ignore
 from splicer.schema import Schema
 
 from . import compare
@@ -19,9 +17,9 @@ def test_get_relation():
     s_table = adapter.get_relation("bogus")
 
     table = dataset.get_relation("bogus")
-    eq_(table, s_table)
+    assert table == s_table
 
-    assert_sequence_equal(dataset.relations, [("bogus", s_table)])
+    assert dataset.relations == [("bogus", s_table.schema)]
 
 
 def test_get_schema():
@@ -43,7 +41,7 @@ def test_get_schema():
 
     schema = dataset.get_schema("computed")
 
-    eq_(schema, Schema([dict(name="field", type="string")]))
+    assert schema == Schema([dict(name="field", type="string")])
 
 
 def test_query_builder():
@@ -52,9 +50,9 @@ def test_query_builder():
     dataset.add_adapter(adapter)
     query = dataset.select("x")
 
-    eq_(isinstance(query, QueryBuilder), True)
-    eq_(query.dataset, dataset)
-    eq_(query.column_exps, "x")
+    assert isinstance(query, QueryBuilder)
+    assert query.dataset == dataset
+    assert query.column_exps == "x"
 
 
 def test_complier():
@@ -90,7 +88,7 @@ def test_views():
 
     view = dataset.get_view("only_x")
 
-    eq_(view, AliasOp("only_x", ProjectionOp(LoadOp("bogus"), Var("x"))))
+    assert view == AliasOp("only_x", ProjectionOp(LoadOp("bogus"), Var("x")))
 
     # create a view off of a view
     dataset.select("x").frm("only_x").create_view("only_x_from_x")
